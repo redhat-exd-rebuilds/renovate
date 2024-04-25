@@ -1,9 +1,13 @@
-import type { UpdateArtifact, UpdateArtifactsResult } from "../types";
-import { logger } from "../../../logger";
-import { deleteLocalFile, getSiblingFileName, readLocalFile } from "../../../util/fs";
+import { TEMPORARY_ERROR } from '../../../constants/error-messages';
+import { logger } from '../../../logger';
 import { exec } from '../../../util/exec';
 import type { ExecOptions } from '../../../util/exec/types';
-import { TEMPORARY_ERROR } from '../../../constants/error-messages';
+import {
+  deleteLocalFile,
+  getSiblingFileName,
+  readLocalFile,
+} from '../../../util/fs';
+import type { UpdateArtifact, UpdateArtifactsResult } from '../types';
 
 export async function updateArtifacts({
   packageFileName,
@@ -19,8 +23,11 @@ export async function updateArtifacts({
     return null;
   }
 
-  let extension = packageFileName.split('.').pop();
-  let lockFileName = getSiblingFileName(packageFileName, `rpms.lock.${extension}`);
+  const extension = packageFileName.split('.').pop();
+  const lockFileName = getSiblingFileName(
+    packageFileName,
+    `rpms.lock.${extension}`,
+  );
 
   logger.debug(`RPM lock file: ${lockFileName}`);
 
@@ -33,13 +40,15 @@ export async function updateArtifacts({
   try {
     await deleteLocalFile(lockFileName);
 
-    cmd.push(`rpm-lockfile-prototype ${packageFileName} --outfile ${lockFileName}`);
+    cmd.push(
+      `rpm-lockfile-prototype ${packageFileName} --outfile ${lockFileName}`,
+    );
 
     // Do not set cwdFile in ExecOptions, because packageFileName
     // and lockFileName already contain the (optional) subfolder.
     // Setting cwdFile would descend into that subfolder and
     // we'd have it set twice.
-    const execOptions: ExecOptions = {}
+    const execOptions: ExecOptions = {};
 
     await exec(cmd, execOptions);
 
@@ -58,8 +67,8 @@ export async function updateArtifacts({
           type: 'addition',
           path: lockFileName,
           contents: newLockFileContent,
-        }
-      }
+        },
+      },
     ];
   } catch (err) {
     if (err.message === TEMPORARY_ERROR) {
