@@ -1,6 +1,6 @@
 import type { UpdateArtifact, UpdateArtifactsResult } from "../types";
 import { logger } from "../../../logger";
-import { deleteLocalFile, readLocalFile, localPathExists } from "../../../util/fs";
+import { deleteLocalFile, readLocalFile } from "../../../util/fs";
 import { exec } from '../../../util/exec';
 import type { ExecOptions } from '../../../util/exec/types';
 import { TEMPORARY_ERROR } from '../../../constants/error-messages';
@@ -25,24 +25,6 @@ export async function updateArtifacts({
   logger.debug(`RPM lock file: ${lockFileName}`);
 
   const existingLockFileContent = await readLocalFile(lockFileName, 'utf8');
-  let containerFileName: string = 'Dockerfile';
-
-  if (await localPathExists('Dockerfile')) {
-    logger.debug(`Using Dockerfile`);
-  } else if (await localPathExists('Containerfile')) {
-    logger.debug(`Using Containerfile`);
-    containerFileName = 'Containerfile';
-  } else {
-    logger.warn('Neither Dockerfile nor Containerfile present in repository, skipping RPM lockfile maintenance');
-    return [
-      {
-        artifactError: {
-          lockFile: lockFileName,
-          stderr: 'Neither Dockerfile nor Containerfile present in repository, skipping RPM lockfile maintenance',
-        },
-      },
-    ]
-  }
 
   logger.debug(`Updating ${lockFileName}`);
 
@@ -51,7 +33,7 @@ export async function updateArtifacts({
   try {
     await deleteLocalFile(lockFileName);
 
-    cmd.push(`rpm-lockfile-prototype -f ${containerFileName} ${packageFileName}`);
+    cmd.push(`rpm-lockfile-prototype ${packageFileName}`);
 
     const execOptions: ExecOptions = {
       cwdFile: packageFileName,
