@@ -29,28 +29,9 @@ describe('modules/manager/rpm/artifacts', () => {
       })).toBeNull();
     });
 
-    it('returns error if no container file present', async () => {
-      expect(await updateArtifacts({
-        packageFileName: 'rpms.in.yaml',
-        updatedDeps: [],
-        newPackageFileContent: '',
-        config: {
-          updateType: 'lockFileMaintenance',
-        }
-      })).toEqual([
-        {
-          artifactError: {
-            lockFile: 'rpms.lock.yaml',
-            stderr: 'Neither Dockerfile nor Containerfile present in repository, skipping RPM lockfile maintenance',
-          }
-        }
-      ]);
-    });
-
     it('returns null if the lock file is the same after update', async () => {
       const execSnapshots = mockExecAll();
 
-      fs.localPathExists.mockResolvedValueOnce(true);
       fs.readLocalFile.mockResolvedValue('Current rpms.lock.yaml');
 
       expect(await updateArtifacts({
@@ -63,14 +44,13 @@ describe('modules/manager/rpm/artifacts', () => {
       })).toBeNull();
 
       expect(execSnapshots).toMatchObject([
-        { cmd: 'rpm-lockfile-prototype -f Dockerfile rpms.in.yaml' },
+        { cmd: 'rpm-lockfile-prototype rpms.in.yaml' },
       ]);
     });
 
     it('returns updated rpms.lock.yaml', async () => {
       const execSnapshots = mockExecAll();
 
-      fs.localPathExists.mockResolvedValueOnce(true);
       fs.readLocalFile.mockResolvedValueOnce('Current rpms.lock.yaml');
       fs.readLocalFile.mockResolvedValueOnce('New rpms.lock.yaml');
 
@@ -92,15 +72,13 @@ describe('modules/manager/rpm/artifacts', () => {
       ]);
 
       expect(execSnapshots).toMatchObject([
-        { cmd: 'rpm-lockfile-prototype -f Dockerfile rpms.in.yaml' },
+        { cmd: 'rpm-lockfile-prototype rpms.in.yaml' },
       ]);
     });
 
     it('returns updated rpms.lock.yaml for Containerfile', async () => {
       const execSnapshots = mockExecAll();
 
-      fs.localPathExists.mockResolvedValueOnce(false);
-      fs.localPathExists.mockResolvedValueOnce(true);
       fs.readLocalFile.mockResolvedValueOnce('Current rpms.lock.yaml');
       fs.readLocalFile.mockResolvedValueOnce('New rpms.lock.yaml');
 
@@ -122,7 +100,7 @@ describe('modules/manager/rpm/artifacts', () => {
       ]);
 
       expect(execSnapshots).toMatchObject([
-        { cmd: 'rpm-lockfile-prototype -f Containerfile rpms.in.yaml' },
+        { cmd: 'rpm-lockfile-prototype rpms.in.yaml' },
       ]);
     });
   });
