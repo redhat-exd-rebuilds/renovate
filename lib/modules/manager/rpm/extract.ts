@@ -1,5 +1,10 @@
 import { logger } from '../../../logger';
 import type { PackageFileContent } from '../types';
+import { parseSingleYaml } from '../../../util/yaml';
+import { readLocalFile } from '../../../util/fs';
+import { RedHatRPMLockfile } from './schema';
+import type { RedHatRPMLockfileDefinition } from './schema';
+import type { PackageDependency } from '../types';
 
 export async function extractPackageFile(
   content: string,
@@ -12,8 +17,33 @@ export async function extractPackageFile(
 
   logger.debug(`RPM lock file: ${lockFile}`);
 
+  let lockFileContent = await readLocalFile(lockFile, 'utf8');
+  let deps: PackageDependency[] = [];
+
+  if (lockFileContent !== null) {
+    try {
+      let lockFile: RedHatRPMLockfileDefinition = parseSingleYaml(lockFileContent, { customSchema: RedHatRPMLockfile });
+
+      logger.debug(`Lock file version: ${lockFile.lockfileVersion}`);
+
+      // TODO: How do we handle multiple arches?
+      deps = lockFile.arches[0].packages.map((dependency) => {
+        return {
+          depName: dependency.name,
+          packageName: dependency.name,
+          currentValue: dependency.evr,
+          currentVersion: dependency.evr,
+          versioning: "rpm",
+          datasource: "rpm-lockfile",
+        }
+      });
+    } catch (e) {
+      logger.debug({ lockFile }, `Error parsing ${lockFile}: ${e}`);
+    }
+  }
+
   return {
     lockFiles: [lockFile],
-    deps: [],
+    deps: deps,
   };
 }
