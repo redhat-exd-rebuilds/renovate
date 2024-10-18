@@ -5,6 +5,26 @@ import { readLocalFile } from '../../../util/fs';
 import { RedHatRPMLockfile } from './schema';
 import type { RedHatRPMLockfileDefinition } from './schema';
 import type { PackageDependency } from '../types';
+import { exec } from '../../../util/exec';
+import type { ExecOptions } from '../../../util/exec/types';
+
+async function getUpdatedLockfile() {
+  const cmd: string[] = [];
+  const packageFileName = "rpms.in.yaml";
+  const outputName = "rpms.lock.tmp.yaml";
+
+  cmd.push(`rpm-lockfile-prototype ${packageFileName} --outfile ${outputName}`);
+
+  const execOptions: ExecOptions = {
+    cwdFile: packageFileName,
+  }
+
+  try {
+    await exec(cmd, execOptions);
+  } catch (err) {
+    logger.debug({ err }, 'Unable to refresh RPM lockfile for datasource');
+  }
+}
 
 export async function extractPackageFile(
   content: string,
@@ -48,6 +68,11 @@ export async function extractPackageFile(
       logger.debug({ lockFile }, `Error parsing ${lockFile}: ${e}`);
     }
   }
+
+  // Generate a new temporary lockfile, so that RPMLockfileDatasource
+  // can pick it up later to avoid performance problems of generating
+  // the lockfile multiple times.
+  await getUpdatedLockfile();
 
   return {
     lockFiles: [lockFile],
