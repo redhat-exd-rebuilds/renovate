@@ -19,3 +19,23 @@ However, it's currently not possible to update RPMs *individually* due to
 dependency resolution happening in `rpm-lockfile-prototype` script, which
 doesn't support per-package updates. This is currently a limitation of the whole
 RPM ecosystem.
+
+Recommended `packageRules` configuration for the `rpm` manager:
+
+```json
+{
+  "packageRules": [
+    {
+      "groupName": "RPM updates",
+      "matchManagers": ["rpm"],
+      "commitMessageAction": "",
+      "commitMessageTopic": "RPM updates",
+      "prTitle": "RPM updates"
+    }
+  ]
+}
+```
+
+This configuration ensures clean PR titles and commit messages.
+If the updates are *not* grouped, then each PR would contain a single
+package in the description while updating the whole lockfile anyway.
