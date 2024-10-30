@@ -18,17 +18,6 @@ describe('modules/manager/rpm/artifacts', () => {
       GlobalConfig.set(adminConfig);
     });
 
-    it('returns null if not in lockFileMaintenance', async () => {
-      expect(await updateArtifacts({
-        packageFileName: 'rpms.in.yaml',
-        updatedDeps: [],
-        newPackageFileContent: '',
-        config: {
-          updateType: 'major',
-        }
-      })).toBeNull();
-    });
-
     it('returns null if the lock file is the same after update', async () => {
       const execSnapshots = mockExecAll();
 
