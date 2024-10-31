@@ -2,17 +2,14 @@ import { logger } from '../../../logger';
 import { getSiblingFileName } from '../../../util/fs';
 import type { PackageFileContent } from '../types';
 import { parseSingleYaml } from '../../../util/yaml';
-import { readLocalFile, localPathExists } from '../../../util/fs';
+import type { PackageDependency, PackageFileContent } from '../types';
 import { RedHatRPMLockfile } from './schema';
 import type { RedHatRPMLockfileDefinition } from './schema';
-import type { PackageDependency } from '../types';
-import { exec } from '../../../util/exec';
-import type { ExecOptions } from '../../../util/exec/types';
 
-async function getUpdatedLockfile() {
+async function getUpdatedLockfile(): Promise<void> {
   const cmd: string[] = [];
-  const packageFileName = "rpms.in.yaml";
-  const outputName = "rpms.lock.tmp.yaml";
+  const packageFileName = 'rpms.in.yaml';
+  const outputName = 'rpms.lock.tmp.yaml';
 
   if (await localPathExists(outputName)) {
     // Only generate the temporary lockfile once
@@ -23,7 +20,7 @@ async function getUpdatedLockfile() {
 
   const execOptions: ExecOptions = {
     cwdFile: packageFileName,
-  }
+  };
 
   try {
     await exec(cmd, execOptions);
@@ -43,29 +40,34 @@ export async function extractPackageFile(
 
   logger.debug(`RPM lock file: ${lockFile}`);
 
-  let lockFileContent = await readLocalFile(lockFile, 'utf8');
-  let deps: PackageDependency[] = [];
+  const lockFileContent = await readLocalFile(lockFile, 'utf8');
+  const deps: PackageDependency[] = [];
 
   if (lockFileContent !== null) {
     try {
-      let lockFile: RedHatRPMLockfileDefinition = parseSingleYaml(lockFileContent, { customSchema: RedHatRPMLockfile });
+      const lockFile: RedHatRPMLockfileDefinition = parseSingleYaml(
+        lockFileContent,
+        { customSchema: RedHatRPMLockfile },
+      );
 
       logger.debug(`Lock file version: ${lockFile.lockfileVersion}`);
 
       for (const arch of lockFile.arches) {
-        let arch_deps: PackageDependency[] = arch.packages.map((dependency) => {
-          return {
-            depName: dependency.name,
-            packageName: dependency.name,
-            currentValue: dependency.evr,
-            currentVersion: dependency.evr,
-            versioning: "rpm",
-            datasource: "rpm-lockfile",
-          }
-        });
+        const arch_deps: PackageDependency[] = arch.packages.map(
+          (dependency) => {
+            return {
+              depName: dependency.name,
+              packageName: dependency.name,
+              currentValue: dependency.evr,
+              currentVersion: dependency.evr,
+              versioning: 'rpm',
+              datasource: 'rpm-lockfile',
+            };
+          },
+        );
 
         for (const dep of arch_deps) {
-          if (deps.findIndex((d) => d.depName == dep.depName) == -1) {
+          if (deps.findIndex((d) => d.depName === dep.depName) === -1) {
             deps.push(dep);
           }
         }
@@ -82,6 +84,6 @@ export async function extractPackageFile(
 
   return {
     lockFiles: [lockFile],
-    deps: deps,
+    deps,
   };
 }

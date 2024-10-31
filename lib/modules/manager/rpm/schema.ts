@@ -15,7 +15,7 @@ export const RedHatRPMLockfile = z.object({
           name: z.string(),
           evr: z.string(),
           sourcerpm: z.string(),
-        })
+        }),
       ),
     }),
   ),

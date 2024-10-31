@@ -6,9 +6,7 @@ import { RPMLockfileDatasource } from '../../datasource/rpm-lockfile';
 
 export const supportsLockFileMaintenance = true;
 
-export const supportedDatasources = [
-  RPMLockfileDatasource.id,
-];
+export const supportedDatasources = [RPMLockfileDatasource.id];
 
 export const defaultConfig = {
   fileMatch: ['(^|/)rpms\\.in\\.ya?ml$'],
