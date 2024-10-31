@@ -1,6 +1,6 @@
-import { extractPackageFile } from '.';
 import { Fixtures } from '../../../../test/fixtures';
 import { fs } from '../../../../test/util';
+import { extractPackageFile } from '.';
 
 jest.mock('../../../util/fs');
 
@@ -12,7 +12,7 @@ describe('modules/manager/rpm/extract', () => {
       expect(await extractPackageFile('', 'rpms.in.yaml')).toEqual({
         deps: [],
         lockFiles: ['rpms.lock.yaml'],
-      })
+      });
     });
 
     it('extracts multiple dependencies', async () => {

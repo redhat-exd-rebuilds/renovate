@@ -1,9 +1,9 @@
 import { join } from 'upath';
 import { mockExecAll } from '../../../../test/exec-util';
 import { fs } from '../../../../test/util';
-import { updateArtifacts } from '.';
-import type { RepoGlobalConfig } from '../../../config/types';
 import { GlobalConfig } from '../../../config/global';
+import type { RepoGlobalConfig } from '../../../config/types';
+import { updateArtifacts } from '.';
 
 jest.mock('../../../util/fs');
 
@@ -23,14 +23,16 @@ describe('modules/manager/rpm/artifacts', () => {
 
       fs.readLocalFile.mockResolvedValue('Current rpms.lock.yaml');
 
-      expect(await updateArtifacts({
-        packageFileName: 'rpms.in.yaml',
-        updatedDeps: [],
-        newPackageFileContent: '',
-        config: {
-          updateType: 'lockFileMaintenance',
-        }
-      })).toBeNull();
+      expect(
+        await updateArtifacts({
+          packageFileName: 'rpms.in.yaml',
+          updatedDeps: [],
+          newPackageFileContent: '',
+          config: {
+            updateType: 'lockFileMaintenance',
+          },
+        }),
+      ).toBeNull();
 
       expect(execSnapshots).toMatchObject([
         { cmd: 'rpm-lockfile-prototype rpms.in.yaml' },
@@ -43,21 +45,23 @@ describe('modules/manager/rpm/artifacts', () => {
       fs.readLocalFile.mockResolvedValueOnce('Current rpms.lock.yaml');
       fs.readLocalFile.mockResolvedValueOnce('New rpms.lock.yaml');
 
-      expect(await updateArtifacts({
-        packageFileName: 'rpms.in.yaml',
-        updatedDeps: [],
-        newPackageFileContent: '',
-        config: {
-          updateType: 'lockFileMaintenance',
-        }
-      })).toEqual([
+      expect(
+        await updateArtifacts({
+          packageFileName: 'rpms.in.yaml',
+          updatedDeps: [],
+          newPackageFileContent: '',
+          config: {
+            updateType: 'lockFileMaintenance',
+          },
+        }),
+      ).toEqual([
         {
           file: {
             type: 'addition',
             path: 'rpms.lock.yaml',
             contents: 'New rpms.lock.yaml',
-          }
-        }
+          },
+        },
       ]);
 
       expect(execSnapshots).toMatchObject([
@@ -71,21 +75,23 @@ describe('modules/manager/rpm/artifacts', () => {
       fs.readLocalFile.mockResolvedValueOnce('Current rpms.lock.yaml');
       fs.readLocalFile.mockResolvedValueOnce('New rpms.lock.yaml');
 
-      expect(await updateArtifacts({
-        packageFileName: 'rpms.in.yaml',
-        updatedDeps: [],
-        newPackageFileContent: '',
-        config: {
-          updateType: 'lockFileMaintenance',
-        }
-      })).toEqual([
+      expect(
+        await updateArtifacts({
+          packageFileName: 'rpms.in.yaml',
+          updatedDeps: [],
+          newPackageFileContent: '',
+          config: {
+            updateType: 'lockFileMaintenance',
+          },
+        }),
+      ).toEqual([
         {
           file: {
             type: 'addition',
             path: 'rpms.lock.yaml',
             contents: 'New rpms.lock.yaml',
-          }
-        }
+          },
+        },
       ]);
 
       expect(execSnapshots).toMatchObject([
