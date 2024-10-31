@@ -21,7 +21,7 @@ describe('modules/manager/rpm/extract', () => {
 
       const res = await extractPackageFile('', 'rpms.in.yaml');
       expect(res?.deps).toHaveLength(24);
-      expect(res).toMatchSnapshot({
+      expect(res).toMatchObject({
         deps: [
           {
             depName: 'cargo',
