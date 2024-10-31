@@ -15,7 +15,7 @@ it is possible to generate a list of packages with their current version
 and the new (available) version. This enables Renovate to display
 a table with dependency updates and allows us to not rely on lockFileMaintenance.
 
-However, it's currently not possible to update RPMs *individually* due to
+However, it's currently not possible to update RPMs _individually_ due to
 dependency resolution happening in `rpm-lockfile-prototype` script, which
 doesn't support per-package updates. This is currently a limitation of the whole
 RPM ecosystem.
@@ -37,5 +37,5 @@ Recommended `packageRules` configuration for the `rpm` manager:
 ```
 
 This configuration ensures clean PR titles and commit messages.
-If the updates are *not* grouped, then each PR would contain a single
+If the updates are _not_ grouped, then each PR would contain a single
 package in the description while updating the whole lockfile anyway.

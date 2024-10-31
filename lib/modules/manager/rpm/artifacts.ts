@@ -16,12 +16,8 @@ export async function updateArtifacts({
   config,
 }: UpdateArtifact): Promise<UpdateArtifactsResult[] | null> {
   logger.debug(`rpm.updateArtifacts(${packageFileName})`);
-  let extension = packageFileName.split('.').pop();
-
-  // Override the package name, since the manager needs
-  // to be set to have `rpms.lock.yaml` as the package file.
-  packageFileName = `rpms.in.${extension}`;
-  let lockFileName = `rpms.lock.${extension}`;
+  const extension = packageFileName.split('.').pop();
+  const lockFileName = `rpms.lock.${extension}`;
 
   logger.debug(`RPM lock file: ${lockFileName}`);
 
