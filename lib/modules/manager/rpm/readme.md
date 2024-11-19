@@ -32,10 +32,19 @@ Recommended `packageRules` configuration for the `rpm` manager:
       "commitMessageTopic": "RPM updates",
       "prTitle": "RPM updates"
     }
-  ]
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "recreateWhen": "always",
+    "rebaseWhen": "behind-base-branch",
+    "branchTopic": "lock-file-maintenance",
+    "schedule": ["at any time"]
+  }
 }
 ```
 
 This configuration ensures clean PR titles and commit messages.
 If the updates are _not_ grouped, then each PR would contain a single
 package in the description while updating the whole lockfile anyway.
+`lockFileMaintenance` is required to create a new lockfile if it doesn't
+exist yet.
