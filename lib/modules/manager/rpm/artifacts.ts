@@ -18,6 +18,7 @@ export async function updateArtifacts({
   logger.debug(`rpm.updateArtifacts(${packageFileName})`);
   const extension = packageFileName.split('.').pop();
   const lockFileName = `rpms.lock.${extension}`;
+  const outputName = 'rpms.lock.tmp.yaml';
 
   logger.debug(`RPM lock file: ${lockFileName}`);
 
@@ -31,7 +32,7 @@ export async function updateArtifacts({
     await deleteLocalFile(lockFileName);
 
     cmd.push(
-      `rpm-lockfile-prototype ${packageFileName} --outfile ${lockFileName}`,
+      `caching-rpm-lockfile-prototype ${packageFileName} --outfile ${lockFileName}`,
     );
 
     // Do not set cwdFile in ExecOptions, because packageFileName
@@ -42,7 +43,7 @@ export async function updateArtifacts({
 
     await exec(cmd, execOptions);
 
-    const newLockFileContent = await readLocalFile(lockFileName, 'utf8');
+    const newLockFileContent = await readLocalFile(outputName, 'utf8');
 
     if (existingLockFileContent === newLockFileContent) {
       logger.debug(`${lockFileName} is unchanged`);

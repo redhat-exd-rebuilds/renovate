@@ -16,7 +16,7 @@ async function getUpdatedLockfile(): Promise<void> {
     return;
   }
 
-  cmd.push(`rpm-lockfile-prototype ${packageFileName} --outfile ${outputName}`);
+  cmd.push(`caching-rpm-lockfile-prototype ${packageFileName} --outfile ${outputName}`);
 
   const execOptions: ExecOptions = {
     cwdFile: packageFileName,
