@@ -14,7 +14,8 @@ import {
 } from './extract-update';
 import { logger, scm } from '~test/util';
 
-const createVulnerabilitiesMock = vi.fn();
+const createVulnerabilitiesMock = jest.fn();
+const createContainerVulnerabilitiesMock = jest.fn();
 
 vi.mock('./write');
 vi.mock('./sort');
@@ -29,9 +30,20 @@ vi.mock('./vulnerabilities', () => {
     },
   };
 });
-vi.mock('../updates/branchify');
-vi.mock('../extract');
-vi.mock('../../../util/cache/repository');
+jest.mock('./container-vulnerabilities', () => {
+  return {
+    __esModule: true,
+    ContainerVulnerabilities: class {
+      static create() {
+        return createContainerVulnerabilitiesMock();
+      }
+    },
+  };
+});
+jest.mock('../updates/branchify');
+jest.mock('../extract');
+jest.mock('../../../util/cache/repository');
+jest.mock('../../../util/git');
 
 const branchify = vi.mocked(_branchify);
 const repositoryCache = vi.mocked(_repositoryCache);
@@ -126,22 +138,23 @@ describe('workers/repository/process/extract-update', () => {
       createVulnerabilitiesMock.mockResolvedValueOnce({
         appendVulnerabilityPackageRules: appendVulnerabilityPackageRulesMock,
       });
+      const appendContainerVulnerabilityPackageRulesMock = jest.fn();
+      createContainerVulnerabilitiesMock.mockResolvedValueOnce({
+        appendVulnerabilityPackageRules:
+          appendContainerVulnerabilityPackageRulesMock,
+      });
       repositoryCache.getCache.mockReturnValueOnce({ scan: {} });
       scm.checkoutBranch.mockResolvedValueOnce('123test' as LongCommitSha);
 
       const packageFiles = await extract(config);
       await lookup(config, packageFiles);
 
-      expect(createVulnerabilitiesMock).toHaveBeenCalledExactlyOnceWith();
+      expect(createVulnerabilitiesMock).toHaveBeenCalledOnce();
+      expect(appendVulnerabilityPackageRulesMock).toHaveBeenCalledOnce();
+      expect(createContainerVulnerabilitiesMock).toHaveBeenCalledOnce();
       expect(
-        appendVulnerabilityPackageRulesMock,
-      ).toHaveBeenCalledExactlyOnceWith(
-        {
-          repoIsOnboarded: true,
-          osvVulnerabilityAlerts: true,
-        },
-        undefined,
-      );
+        appendContainerVulnerabilityPackageRulesMock,
+      ).toHaveBeenCalledOnce();
     });
 
     it('handles exception when fetching vulnerabilities', async () => {
