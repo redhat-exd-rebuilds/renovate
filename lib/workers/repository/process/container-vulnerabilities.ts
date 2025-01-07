@@ -71,31 +71,32 @@ export class ContainerVulnerabilities {
     packageFiles: Record<string, PackageFile[]>,
   ): Promise<ContainerVulnerability[]> {
     const managers = Object.keys(packageFiles);
-
-    // TODO: should we also include other docker managers: devcontainer, docker-compose ?
-    if (!managers.includes('dockerfile')) {
-      logger.info(
-        'Dockerfile manager is not detected, skipping container vulnerability check',
-      );
-      return [];
-    }
-    const managerConfig = getManagerConfig(config, 'dockerfile');
-
-    const queue = packageFiles['dockerfile'].map(
-      (pFile) => (): Promise<ContainerVulnerability[]> =>
-        this.fetchDockerfilePackageFileVulnerabilities(managerConfig, pFile),
+    const allManagerJobs = managers.map((manager) =>
+      this.fetchManagerVulnerabilities(config, packageFiles, manager),
     );
+    return (await Promise.all(allManagerJobs)).flat();
+  }
 
-    logger.debug(
-      { queueLength: queue.length },
-      'fetchDependencyVulnerabilities starting',
+  private async fetchManagerVulnerabilities(
+    config: RenovateConfig,
+    packageFiles: Record<string, PackageFile[]>,
+    manager: string,
+  ): Promise<ContainerVulnerability[]> {
+    const managerConfig = getManagerConfig(config, manager);
+    const queue = packageFiles[manager].map(
+      (pFile) => (): Promise<ContainerVulnerability[]> =>
+        this.fetchManagerPackageFileVulnerabilities(managerConfig, pFile),
+    );
+    logger.trace(
+      { manager, queueLength: queue.length },
+      'fetchManagerVulnerabilities starting',
     );
     const result = (await p.all(queue)).flat();
-    logger.debug('fetchDependencyVulnerabilities finished');
+    logger.trace({ manager }, 'fetchManagerVulnerabilities finished');
     return result;
   }
 
-  private async fetchDockerfilePackageFileVulnerabilities(
+  private async fetchManagerPackageFileVulnerabilities(
     managerConfig: RenovateConfig,
     pFile: PackageFile,
   ): Promise<ContainerVulnerability[]> {
@@ -104,30 +105,35 @@ export class ContainerVulnerabilities {
     const { manager } = packageFileConfig;
     const queue = pFile.deps.map(
       (dep) => (): Promise<ContainerVulnerability[] | null> =>
-        this.fetchDependencyVulnerability(packageFileConfig, dep),
+        this.fetchDockerDependencyVulnerability(packageFileConfig, dep),
     );
     logger.trace(
       { manager, packageFile, queueLength: queue.length },
-      'fetchDockerfilePackageFileVulnerabilities starting with concurrency',
+      'fetchManagerPackageFileVulnerabilities starting with concurrency',
     );
 
     const result = (await p.all(queue)).flat();
     logger.trace(
       { packageFile },
-      'fetchDockerfilePackageFileVulnerabilities finished',
+      'fetchManagerPackageFileVulnerabilities finished',
     );
+
     return result.filter(is.truthy);
   }
 
-  private async fetchDependencyVulnerability(
+  private async fetchDockerDependencyVulnerability(
     packageFileConfig: RenovateConfig & PackageFile,
     dep: PackageDependency,
   ): Promise<ContainerVulnerability[] | null> {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
     const depName = dep.depName ?? '';
     if (depName === '') {
       logger.warn('Dependency name is unset, skipping');
+      return null;
+    }
+    if (dep.datasource! !== 'docker') {
+      logger.info(
+        `Dependency ${depName} has a non-docker datasource, skipping`,
+      );
       return null;
     }
     const oldDigest = dep.currentDigest ?? '';
@@ -226,7 +232,7 @@ export class ContainerVulnerabilities {
           newDigest,
           depName,
           vulnerability: osvVulnerability,
-          datasource: dep.datasource!,
+          datasource: dep.datasource,
         });
       }
 
@@ -401,7 +407,6 @@ export class ContainerVulnerabilities {
 
   // method almost completely copied from vulnerabilities.ts
   private evaluateCvssVector(vector: string): [string, string] {
-    logger.debug({ vector }, 'this is my vector');
     try {
       const parsedCvss: CvssScore = parseCvssVector(vector);
       const severityLevel = parsedCvss.cvss3OverallSeverityText;
