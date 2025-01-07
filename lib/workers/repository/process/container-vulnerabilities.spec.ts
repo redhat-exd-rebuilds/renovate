@@ -98,7 +98,7 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         packageFiles,
       );
       expect(logger.logger.info).toHaveBeenCalledWith(
-        'Dockerfile manager is not detected, skipping container vulnerability check',
+        'Dependency node has a non-docker datasource, skipping',
       );
     });
 
