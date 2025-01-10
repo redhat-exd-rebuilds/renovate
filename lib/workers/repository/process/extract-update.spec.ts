@@ -9,6 +9,7 @@ import * as _branchify from '../updates/branchify';
 import { extract, isCacheExtractValid, lookup, update } from './extract-update';
 
 const createVulnerabilitiesMock = jest.fn();
+const createContainerVulnerabilitiesMock = jest.fn();
 
 jest.mock('./write');
 jest.mock('./sort');
@@ -19,6 +20,16 @@ jest.mock('./vulnerabilities', () => {
     Vulnerabilities: class {
       static create() {
         return createVulnerabilitiesMock();
+      }
+    },
+  };
+});
+jest.mock('./container-vulnerabilities', () => {
+  return {
+    __esModule: true,
+    ContainerVulnerabilities: class {
+      static create() {
+        return createContainerVulnerabilitiesMock();
       }
     },
   };
@@ -119,6 +130,11 @@ describe('workers/repository/process/extract-update', () => {
       createVulnerabilitiesMock.mockResolvedValueOnce({
         appendVulnerabilityPackageRules: appendVulnerabilityPackageRulesMock,
       });
+      const appendContainerVulnerabilityPackageRulesMock = jest.fn();
+      createContainerVulnerabilitiesMock.mockResolvedValueOnce({
+        appendVulnerabilityPackageRules:
+          appendContainerVulnerabilityPackageRulesMock,
+      });
       repositoryCache.getCache.mockReturnValueOnce({ scan: {} });
       scm.checkoutBranch.mockResolvedValueOnce('123test' as LongCommitSha);
 
@@ -127,6 +143,10 @@ describe('workers/repository/process/extract-update', () => {
 
       expect(createVulnerabilitiesMock).toHaveBeenCalledOnce();
       expect(appendVulnerabilityPackageRulesMock).toHaveBeenCalledOnce();
+      expect(createContainerVulnerabilitiesMock).toHaveBeenCalledOnce();
+      expect(
+        appendContainerVulnerabilityPackageRulesMock,
+      ).toHaveBeenCalledOnce();
     });
 
     it('handles exception when fetching vulnerabilities', async () => {

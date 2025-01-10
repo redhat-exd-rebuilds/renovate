@@ -13,6 +13,15 @@ export interface Vulnerability {
   affected: Osv.Affected;
 }
 
+export interface ContainerVulnerability {
+  config: RenovateConfig & PackageFile;
+  oldDigest: string;
+  newDigest: string;
+  depName: string;
+  vulnerability: Osv.Vulnerability;
+  datasource: string;
+}
+
 export interface DependencyVulnerabilities {
   versioningApi: VersioningApi;
   vulnerabilities: Vulnerability[];
