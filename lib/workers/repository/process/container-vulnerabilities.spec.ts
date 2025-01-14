@@ -1,4 +1,4 @@
-import type { Osv, OsvOffline } from '@renovatebot/osv-offline';
+import type { Osv, OsvOffline } from '@mintmaker/osv-offline';
 import { mockFn } from 'jest-mock-extended';
 import type { RenovateConfig } from '../../../../test/util';
 import { logger } from '../../../../test/util';
@@ -7,11 +7,11 @@ import { DockerDatasource } from '../../../modules/datasource/docker';
 import type { PackageFile } from '../../../modules/manager/types';
 import { ContainerVulnerabilities } from './container-vulnerabilities';
 
-const getVulnerabilitiesMock =
-  mockFn<typeof OsvOffline.prototype.getVulnerabilities>();
+const getContainerVulnerabilitiesMock =
+  mockFn<typeof OsvOffline.prototype.getContainerVulnerabilities>();
 const createMock = jest.fn();
 
-jest.mock('@renovatebot/osv-offline', () => {
+jest.mock('@mintmaker/osv-offline', () => {
   return {
     __esModule: true,
     OsvOffline: class {
@@ -73,7 +73,7 @@ describe('workers/repository/process/container-vulnerabilities', () => {
 
     beforeAll(async () => {
       createMock.mockResolvedValue({
-        getVulnerabilities: getVulnerabilitiesMock,
+        getContainerVulnerabilities: getContainerVulnerabilitiesMock,
       });
       vulnerabilities = await ContainerVulnerabilities.create();
     });
@@ -111,7 +111,7 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockResolvedValueOnce([]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([]);
 
       await vulnerabilities.appendVulnerabilityPackageRules(
         config,
@@ -137,7 +137,7 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockResolvedValueOnce([]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([]);
 
       await vulnerabilities.appendVulnerabilityPackageRules(
         config,
@@ -164,13 +164,13 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockResolvedValueOnce([]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([]);
 
       await vulnerabilities.appendVulnerabilityPackageRules(
         config,
         packageFiles,
       );
-      expect(logger.logger.trace).toHaveBeenCalledWith(
+      expect(logger.logger.info).toHaveBeenCalledWith(
         'No vulnerabilities found in OSV database for quay.io/test/repo',
       );
     });
@@ -191,7 +191,9 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockResolvedValueOnce([testVulnerability]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([
+        testVulnerability,
+      ]);
 
       const mockedGetConfigDigest = DockerDatasource.prototype
         .getConfigDigest as jest.Mock;
@@ -236,7 +238,9 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockResolvedValueOnce([testVulnerability]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([
+        testVulnerability,
+      ]);
 
       await vulnerabilities.appendVulnerabilityPackageRules(
         config,
@@ -264,7 +268,9 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         ],
       };
 
-      getVulnerabilitiesMock.mockResolvedValueOnce([testVulnerability]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([
+        testVulnerability,
+      ]);
 
       const mockedGetConfigDigest = DockerDatasource.prototype
         .getConfigDigest as jest.Mock;
@@ -308,7 +314,9 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         ],
       };
 
-      getVulnerabilitiesMock.mockResolvedValueOnce([testVulnerability]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([
+        testVulnerability,
+      ]);
       const mockedGetConfigDigest = DockerDatasource.prototype
         .getConfigDigest as jest.Mock;
       mockedGetConfigDigest.mockResolvedValueOnce('a1b2c3');
@@ -351,7 +359,9 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockResolvedValueOnce([testVulnerability]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([
+        testVulnerability,
+      ]);
 
       const mockedGetConfigDigest = DockerDatasource.prototype
         .getConfigDigest as jest.Mock;
@@ -396,7 +406,7 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockResolvedValueOnce([
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([
         {
           ...testVulnerability,
           withdrawn: '2024-10-29T18:17:00Z',
@@ -447,7 +457,7 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         ],
       };
       const { published, ...rest } = testVulnerability;
-      getVulnerabilitiesMock.mockResolvedValueOnce([rest]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([rest]);
 
       const mockedGetConfigDigest = DockerDatasource.prototype
         .getConfigDigest as jest.Mock;
@@ -492,7 +502,9 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockResolvedValueOnce([testVulnerability]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([
+        testVulnerability,
+      ]);
 
       const mockedGetConfigDigest = DockerDatasource.prototype
         .getConfigDigest as jest.Mock;
@@ -538,7 +550,7 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockRejectedValueOnce(err);
+      getContainerVulnerabilitiesMock.mockRejectedValueOnce(err);
 
       await vulnerabilities.appendVulnerabilityPackageRules(
         config,
@@ -566,7 +578,9 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockResolvedValueOnce([testVulnerability]);
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([
+        testVulnerability,
+      ]);
 
       const mockedGetConfigDigest = DockerDatasource.prototype
         .getConfigDigest as jest.Mock;
@@ -643,7 +657,7 @@ describe('workers/repository/process/container-vulnerabilities', () => {
           },
         ],
       };
-      getVulnerabilitiesMock.mockResolvedValueOnce([
+      getContainerVulnerabilitiesMock.mockResolvedValueOnce([
         testVulnerability,
         {
           ...testVulnerability,
