@@ -165,6 +165,8 @@
     "@renovatebot/detect-tools": "1.1.0",
     "@renovatebot/kbpgp": "3.0.1",
     "@renovatebot/osv-offline": "1.5.10",
+    "@mintmaker/osv-offline": "1.0.0",
+    "@mintmaker/osv-offline-db": "1.0.0",
     "@renovatebot/pep440": "3.0.20",
     "@renovatebot/ruby-semver": "3.0.23",
     "@sindresorhus/is": "4.6.0",
