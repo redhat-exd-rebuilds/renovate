@@ -120,6 +120,7 @@ describe('workers/repository/process/extract-update', () => {
       const config = {
         repoIsOnboarded: true,
         osvVulnerabilityAlerts: true,
+        containerVulnerabilityAlerts: true,
       };
       const appendVulnerabilityPackageRulesMock = vi.fn();
       createVulnerabilitiesMock.mockResolvedValueOnce({

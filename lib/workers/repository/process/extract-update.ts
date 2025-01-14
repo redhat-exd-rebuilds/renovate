@@ -211,8 +211,10 @@ async function fetchContainerVulnerabilities(
   config: RenovateConfig,
   packageFiles: Record<string, PackageFile[]>,
 ): Promise<void> {
-  if (config.osvVulnerabilityAlerts) {
-    logger.debug('fetchDockerVulnerabilities() - osvVulnerabilityAlerts=true');
+  if (config.containerVulnerabilityAlerts) {
+    logger.debug(
+      'fetchDockerVulnerabilities() - containerVulnerabilityAlerts=true',
+    );
     try {
       const vulnerabilities = await ContainerVulnerabilities.create();
       await vulnerabilities.appendVulnerabilityPackageRules(
