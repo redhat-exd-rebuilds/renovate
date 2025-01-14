@@ -1,5 +1,5 @@
-import { OsvOffline } from '@renovatebot/osv-offline';
-import type { Osv } from '@renovatebot/osv-offline';
+import type { Osv } from '@mintmaker/osv-offline';
+import { OsvOffline } from '@mintmaker/osv-offline';
 import is from '@sindresorhus/is';
 import type { CvssScore } from 'vuln-vects';
 import { parseCvssVector } from 'vuln-vects';
@@ -147,7 +147,7 @@ export class ContainerVulnerabilities {
     try {
       // this is a wrong call, it will change when docker support is osv-offline is implemented
       const OSVContainerVulnerabilities =
-        await this.osvOffline?.getVulnerabilities('Go', depName);
+        await this.osvOffline?.getContainerVulnerabilities(depName);
 
       // creating a dummy vulnerability here for testing purposes.
       // The final format will likely be a bit different since we're working with different data than other ecosystems
@@ -191,7 +191,7 @@ export class ContainerVulnerabilities {
         is.nullOrUndefined(OSVContainerVulnerabilities) ||
         is.emptyArray(OSVContainerVulnerabilities)
       ) {
-        logger.trace(`No vulnerabilities found in OSV database for ${depName}`);
+        logger.info(`No vulnerabilities found in OSV database for ${depName}`);
         return null;
       }
 

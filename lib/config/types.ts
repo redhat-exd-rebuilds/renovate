@@ -287,6 +287,7 @@ export interface RenovateConfig
   warnings?: ValidationMessage[];
   vulnerabilityAlerts?: RenovateSharedConfig;
   osvVulnerabilityAlerts?: boolean;
+  containerVulnerabilityAlerts?: boolean;
   vulnerabilitySeverity?: string;
   customManagers?: CustomManager[];
   customDatasources?: Record<string, CustomDatasourceConfig>;
