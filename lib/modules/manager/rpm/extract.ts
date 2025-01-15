@@ -1,5 +1,6 @@
 import { logger } from '../../../logger';
 import type { PackageFileContent } from '../types';
+import { getSiblingFileName } from '../../../util/fs';
 
 export async function extractPackageFile(
   content: string,
@@ -8,7 +9,7 @@ export async function extractPackageFile(
   logger.debug(`rpm.extractPackageFile(${packageFile})`);
 
   let extension = packageFile.split('.').pop();
-  let lockFile = `rpms.lock.${extension}`;
+  let lockFile = getSiblingFileName(packageFile, `rpms.lock.${extension}`);
 
   logger.debug(`RPM lock file: ${lockFile}`);
 

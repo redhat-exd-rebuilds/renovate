@@ -1,6 +1,6 @@
 import type { UpdateArtifact, UpdateArtifactsResult } from "../types";
 import { logger } from "../../../logger";
-import { deleteLocalFile, readLocalFile } from "../../../util/fs";
+import { deleteLocalFile, getSiblingFileName, readLocalFile } from "../../../util/fs";
 import { exec } from '../../../util/exec';
 import type { ExecOptions } from '../../../util/exec/types';
 import { TEMPORARY_ERROR } from '../../../constants/error-messages';
@@ -20,7 +20,7 @@ export async function updateArtifacts({
   }
 
   let extension = packageFileName.split('.').pop();
-  let lockFileName = `rpms.lock.${extension}`;
+  let lockFileName = getSiblingFileName(packageFileName, `rpms.lock.${extension}`);
 
   logger.debug(`RPM lock file: ${lockFileName}`);
 
@@ -33,11 +33,13 @@ export async function updateArtifacts({
   try {
     await deleteLocalFile(lockFileName);
 
-    cmd.push(`rpm-lockfile-prototype ${packageFileName}`);
+    cmd.push(`rpm-lockfile-prototype ${packageFileName} --outfile ${lockFileName}`);
 
-    const execOptions: ExecOptions = {
-      cwdFile: packageFileName,
-    }
+    // Do not set cwdFile in ExecOptions, because packageFileName
+    // and lockFileName already contain the (optional) subfolder.
+    // Setting cwdFile would descend into that subfolder and
+    // we'd have it set twice.
+    const execOptions: ExecOptions = {}
 
     await exec(cmd, execOptions);
 
