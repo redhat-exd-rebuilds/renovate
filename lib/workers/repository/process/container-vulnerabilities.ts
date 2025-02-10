@@ -1,5 +1,5 @@
-import { OsvOffline } from '@renovatebot/osv-offline';
-import type { Osv } from '@renovatebot/osv-offline';
+import type { Osv } from '@mintmaker/osv-offline';
+import { OsvOffline } from '@mintmaker/osv-offline';
 import is from '@sindresorhus/is';
 import type { CvssScore } from 'vuln-vects';
 import { parseCvssVector } from 'vuln-vects';
@@ -143,55 +143,15 @@ export class ContainerVulnerabilities {
       return null;
     }
 
-    // TODO: query osv-offline here to get all vulnerabilities of a given repo
     try {
-      // this is a wrong call, it will change when docker support is osv-offline is implemented
       const OSVContainerVulnerabilities =
-        await this.osvOffline?.getVulnerabilities('Go', depName);
-
-      // creating a dummy vulnerability here for testing purposes.
-      // The final format will likely be a bit different since we're working with different data than other ecosystems
-      // but it's OK for now.
-      // We assume that OSVContainerVulnerabilities only contains vulnerabilities that affect the
-      // analyzed repo. OSV query will be responsible for this filter.
-      // OSVContainerVulnerabilities = [
-      //   {
-      //     schema_version: '1.2.3',
-      //     id: 'GHSA-22cc-w7xm-rfhx',
-      //     modified: '2024-06-21T19:36:07.296811Z',
-      //     published: '2024-06-20T19:53:30Z',
-      //     aliases: ['CVE-2019-7617', 'PYSEC-2019-178'],
-      //     related: [
-      //       'CGA-2ph7-wp75-g3rf',
-      //       'CGA-326j-45xp-qqrg',
-      //       'CGA-3727-xg6m-m6g6',
-      //     ],
-      //     summary: 'redis-py Race Condition vulnerability',
-      //     details:
-      //       'redis-py before 4.5.3, as used in ChatGPT and other products, leaves a connection open after canceling',
-      //     severity: [
-      //       {
-      //         type: 'CVSS_V3',
-      //         score: 'CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H',
-      //       },
-      //     ],
-      //     affected: [
-      //       {
-      //         package: {
-      //           ecosystem: 'docker',
-      //           // We will use package name to hold docker repo for now
-      //           name: 'quay.io/prometheus/node-exporter',
-      //         },
-      //       },
-      //     ],
-      //   },
-      // ];
+        await this.osvOffline?.getContainerVulnerabilities(depName);
 
       if (
         is.nullOrUndefined(OSVContainerVulnerabilities) ||
         is.emptyArray(OSVContainerVulnerabilities)
       ) {
-        logger.trace(`No vulnerabilities found in OSV database for ${depName}`);
+        logger.info(`No vulnerabilities found in OSV database for ${depName}`);
         return null;
       }
 
