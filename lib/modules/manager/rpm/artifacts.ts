@@ -3,11 +3,6 @@ import { logger } from '../../../logger';
 import { deleteLocalFile, getSiblingFileName, readLocalFile } from "../../../util/fs";
 import { exec } from '../../../util/exec';
 import type { ExecOptions } from '../../../util/exec/types';
-import {
-  deleteLocalFile,
-  getSiblingFileName,
-  readLocalFile,
-} from '../../../util/fs';
 import type { UpdateArtifact, UpdateArtifactsResult } from '../types';
 
 export async function updateArtifacts({
