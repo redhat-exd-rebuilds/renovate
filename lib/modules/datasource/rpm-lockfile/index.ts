@@ -5,19 +5,20 @@ import { RedHatRPMLockfile } from '../../manager/rpm/schema';
 import type { RedHatRPMLockfileDefinition } from '../../manager/rpm/schema';
 import { Datasource } from '../datasource';
 import type { GetReleasesConfig, ReleaseResult } from '../types';
+import { api } from '../../versioning/rpm';
 
 export class RPMLockfileDatasource extends Datasource {
   static readonly id = 'rpm-lockfile';
-  dependencyUpdateData: Map<string, string> = new Map();
+  dependencyUpdateData: Map<string, string[]> = new Map();
   dependencyCheckInitiated = false;
 
   constructor() {
     super(RPMLockfileDatasource.id);
   }
 
-  async loadUpdatedLockfile(): Promise<void> {
+  async loadUpdatedLockfile(which: string): Promise<void> {
     const newLockFileContent = await readLocalFile(
-      'rpms.lock.tmp.yaml',
+      which,
       'utf8',
     );
 
@@ -34,7 +35,11 @@ export class RPMLockfileDatasource extends Datasource {
     for (const arch of lockFile.arches) {
       for (const dependency of arch.packages) {
         if (!this.dependencyUpdateData.has(dependency.name)) {
-          this.dependencyUpdateData.set(dependency.name, dependency.evr);
+          this.dependencyUpdateData.set(dependency.name, [dependency.evr]);
+        } else {
+          if (!this.dependencyUpdateData.get(dependency.name)?.includes(dependency.evr)) {
+            this.dependencyUpdateData.get(dependency.name)!.push(dependency.evr);
+          }
         }
       }
     }
@@ -44,7 +49,8 @@ export class RPMLockfileDatasource extends Datasource {
     getReleasesConfig: GetReleasesConfig,
   ): Promise<ReleaseResult | null> {
     if (!this.dependencyCheckInitiated) {
-      await this.loadUpdatedLockfile();
+      await this.loadUpdatedLockfile('rpms.lock.tmp.yaml');
+      await this.loadUpdatedLockfile('rpms.lock.yaml');
       this.dependencyCheckInitiated = true;
     }
 
@@ -56,12 +62,13 @@ export class RPMLockfileDatasource extends Datasource {
       return null;
     }
 
+    logger.debug(`RPM release: ${getReleasesConfig.packageName} -> ${packageVersion}`);
+
+    let latestVersion = packageVersion.sort((a, b) => api.sortVersions(a, b)).at(-1);
+    logger.debug(`latestVersion: ${latestVersion}`);
+
     return {
-      releases: [
-        {
-          version: packageVersion,
-        },
-      ],
+      releases: packageVersion.map(v => { return { version: v } }),
     };
   }
 }
