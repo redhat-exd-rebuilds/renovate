@@ -13,6 +13,7 @@ import { extractAllDependencies } from '../extract';
 import { generateFingerprintConfig } from '../extract/extract-fingerprint-config';
 import { branchifyUpgrades } from '../updates/branchify';
 import { ContainerVulnerabilities } from './container-vulnerabilities';
+import { RpmVulnerabilities } from './rpm-vulnerabilities';
 import { fetchUpdates } from './fetch';
 import { calculateLibYears } from './libyear';
 import { sortBranches } from './sort';
@@ -225,6 +226,29 @@ async function fetchContainerVulnerabilities(
       logger.warn(
         { err },
         'Unable to read container vulnerability information',
+      );
+    }
+  }
+}
+
+async function fetchRpmVulnerabilities(
+  config: RenovateConfig,
+  packageFiles: Record<string, PackageFile[]>,
+): Promise<void> {
+  if (config.rpmVulnerabilityAlerts) {
+    logger.debug(
+      'fetchRpmVulnerabilities() - rpmVulnerabilityAlerts=true',
+    );
+    try {
+      const vulnerabilities = await RpmVulnerabilities.create();
+      await vulnerabilities.appendVulnerabilityPackageRules(
+        config,
+        packageFiles,
+      );
+    } catch (err) {
+      logger.warn(
+        { err },
+        'Unable to read RPM vulnerability information',
       );
     }
   }

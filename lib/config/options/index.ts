@@ -2080,6 +2080,14 @@ const options: RenovateOptions[] = [
     experimentalIssues: [20542],
   },
   {
+    name: 'rpmVulnerabilityAlerts',
+    description: 'Enable vulnerability alerts for RPMs.',
+    type: 'boolean',
+    default: false,
+    experimental: true,
+    experimentalIssues: [20542],
+  },
+  {
     name: 'pruneBranchAfterAutomerge',
     description: 'Set to `true` to enable branch pruning after automerging.',
     type: 'boolean',
