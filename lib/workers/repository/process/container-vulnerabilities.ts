@@ -350,10 +350,7 @@ export class ContainerVulnerabilities {
       score = baseScore
         ? `${baseScore} / 10 (${titleCase(severityLevel)})`
         : 'Unknown';
-    } else if (
-      vulnerability.id.startsWith('GHSA-') &&
-      vulnerability.database_specific?.severity
-    ) {
+    } else if (vulnerability.database_specific?.severity) {
       const severity = vulnerability.database_specific.severity as string;
       severityLevel = severity.toUpperCase();
     }
