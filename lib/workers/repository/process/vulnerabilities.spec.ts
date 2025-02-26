@@ -1,4 +1,4 @@
-import type { Osv, OsvOffline } from '@renovatebot/osv-offline';
+import type { Osv, OsvOffline } from '@mintmaker/osv-offline';
 import { codeBlock } from 'common-tags';
 import { mockFn } from 'jest-mock-extended';
 import type { RenovateConfig } from '../../../../test/util';
@@ -11,7 +11,7 @@ const getVulnerabilitiesMock =
   mockFn<typeof OsvOffline.prototype.getVulnerabilities>();
 const createMock = jest.fn();
 
-jest.mock('@renovatebot/osv-offline', () => {
+jest.mock('@mintmaker/osv-offline', () => {
   return {
     __esModule: true,
     OsvOffline: class {
