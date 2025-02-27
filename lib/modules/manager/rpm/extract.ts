@@ -1,7 +1,11 @@
 import { logger } from '../../../logger';
 import { exec } from '../../../util/exec';
-import { ExecOptions } from '../../../util/exec/types';
-import { getSiblingFileName, localPathExists, readLocalFile } from '../../../util/fs';
+import type { ExecOptions } from '../../../util/exec/types';
+import {
+  getSiblingFileName,
+  localPathExists,
+  readLocalFile,
+} from '../../../util/fs';
 import { parseSingleYaml } from '../../../util/yaml';
 import type { PackageDependency, PackageFileContent } from '../types';
 import { RedHatRPMLockfile } from './schema';
@@ -17,7 +21,9 @@ async function getUpdatedLockfile(): Promise<void> {
     return;
   }
 
-  cmd.push(`caching-rpm-lockfile-prototype ${packageFileName} --outfile ${outputName}`);
+  cmd.push(
+    `caching-rpm-lockfile-prototype ${packageFileName} --outfile ${outputName}`,
+  );
 
   const execOptions: ExecOptions = {
     cwdFile: packageFileName,
