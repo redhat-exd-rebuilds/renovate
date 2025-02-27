@@ -14,9 +14,9 @@ import { extractAllDependencies } from '../extract';
 import { generateFingerprintConfig } from '../extract/extract-fingerprint-config';
 import { branchifyUpgrades } from '../updates/branchify';
 import { ContainerVulnerabilities } from './container-vulnerabilities';
-import { RpmVulnerabilities } from './rpm-vulnerabilities';
 import { fetchUpdates } from './fetch';
 import { calculateLibYears } from './libyear';
+import { RpmVulnerabilities } from './rpm-vulnerabilities';
 import { sortBranches } from './sort';
 import { Vulnerabilities } from './vulnerabilities';
 import type { WriteUpdateResult } from './write';
@@ -245,9 +245,7 @@ async function fetchRpmVulnerabilities(
   packageFiles: Record<string, PackageFile[]>,
 ): Promise<void> {
   if (config.rpmVulnerabilityAlerts) {
-    logger.debug(
-      'fetchRpmVulnerabilities() - rpmVulnerabilityAlerts=true',
-    );
+    logger.debug('fetchRpmVulnerabilities() - rpmVulnerabilityAlerts=true');
     try {
       const vulnerabilities = await RpmVulnerabilities.create();
       await vulnerabilities.appendVulnerabilityPackageRules(
@@ -255,10 +253,7 @@ async function fetchRpmVulnerabilities(
         packageFiles,
       );
     } catch (err) {
-      logger.warn(
-        { err },
-        'Unable to read RPM vulnerability information',
-      );
+      logger.warn({ err }, 'Unable to read RPM vulnerability information');
     }
   }
 }

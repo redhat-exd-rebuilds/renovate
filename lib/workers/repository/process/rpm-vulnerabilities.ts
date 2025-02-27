@@ -34,8 +34,8 @@ export class RpmVulnerabilities {
     string,
     Ecosystem | undefined
   > = {
-      "rpm-lockfile": 'RPM',
-    };
+    'rpm-lockfile': 'RPM',
+  };
 
   private constructor() {}
 
@@ -156,7 +156,8 @@ export class RpmVulnerabilities {
     packageFileConfig: RenovateConfig & PackageFile,
     dep: PackageDependency,
   ): Promise<DependencyVulnerabilities | null> {
-    const ecosystem = RpmVulnerabilities.datasourceEcosystemMap[dep.datasource!];
+    const ecosystem =
+      RpmVulnerabilities.datasourceEcosystemMap[dep.datasource!];
 
     if (!ecosystem) {
       logger.trace(`Cannot map datasource ${dep.datasource!} to OSV ecosystem`);
@@ -562,12 +563,13 @@ export class RpmVulnerabilities {
       content += `${titleCase(severityDetails.severityLevel)}\n`;
     }
 
-    content += `\n#### References\n${vulnerability.references
-      ?.map((ref) => {
-        return `- [${ref.url}](${ref.url})`;
-      })
-      .join('\n') ?? 'No references.'
-      }`;
+    content += `\n#### References\n${
+      vulnerability.references
+        ?.map((ref) => {
+          return `- [${ref.url}](${ref.url})`;
+        })
+        .join('\n') ?? 'No references.'
+    }`;
 
     let attribution = '';
     if (vulnerability.id.startsWith('GHSA-')) {

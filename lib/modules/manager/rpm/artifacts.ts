@@ -1,8 +1,12 @@
 import { TEMPORARY_ERROR } from '../../../constants/error-messages';
 import { logger } from '../../../logger';
-import { deleteLocalFile, getSiblingFileName, readLocalFile } from "../../../util/fs";
 import { exec } from '../../../util/exec';
 import type { ExecOptions } from '../../../util/exec/types';
+import {
+  deleteLocalFile,
+  getSiblingFileName,
+  readLocalFile,
+} from '../../../util/fs';
 import type { UpdateArtifact, UpdateArtifactsResult } from '../types';
 
 export async function updateArtifacts({
@@ -13,7 +17,10 @@ export async function updateArtifacts({
 }: UpdateArtifact): Promise<UpdateArtifactsResult[] | null> {
   logger.debug(`rpm.updateArtifacts(${packageFileName})`);
   const extension = packageFileName.split('.').pop();
-  const lockFileName = getSiblingFileName(packageFileName, `rpms.lock.${extension}`);
+  const lockFileName = getSiblingFileName(
+    packageFileName,
+    `rpms.lock.${extension}`,
+  );
   const outputName = 'rpms.lock.tmp.yaml';
 
   logger.debug(`RPM lock file: ${lockFileName}`);

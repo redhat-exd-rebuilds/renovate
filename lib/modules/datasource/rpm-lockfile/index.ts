@@ -16,10 +16,7 @@ export class RPMLockfileDatasource extends Datasource {
   }
 
   async loadUpdatedLockfile(which: string): Promise<void> {
-    const newLockFileContent = await readLocalFile(
-      which,
-      'utf8',
-    );
+    const newLockFileContent = await readLocalFile(which, 'utf8');
 
     if (newLockFileContent === null) {
       logger.debug('New lockfile content is null');
@@ -33,12 +30,18 @@ export class RPMLockfileDatasource extends Datasource {
 
     for (const arch of lockFile.arches) {
       for (const dependency of arch.packages) {
-        if (!this.dependencyUpdateData.has(dependency.name)) {
-          this.dependencyUpdateData.set(dependency.name, [dependency.evr]);
-        } else {
-          if (!this.dependencyUpdateData.get(dependency.name)?.includes(dependency.evr)) {
-            this.dependencyUpdateData.get(dependency.name)!.push(dependency.evr);
+        if (this.dependencyUpdateData.has(dependency.name)) {
+          if (
+            !this.dependencyUpdateData
+              .get(dependency.name)
+              ?.includes(dependency.evr)
+          ) {
+            this.dependencyUpdateData
+              .get(dependency.name)!
+              .push(dependency.evr);
           }
+        } else {
+          this.dependencyUpdateData.set(dependency.name, [dependency.evr]);
         }
       }
     }
@@ -62,7 +65,9 @@ export class RPMLockfileDatasource extends Datasource {
     }
 
     return {
-      releases: packageVersion.map(v => { return { version: v } }),
+      releases: packageVersion.map((v) => {
+        return { version: v };
+      }),
     };
   }
 }
