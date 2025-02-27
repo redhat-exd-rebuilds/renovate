@@ -5,7 +5,6 @@ import { RedHatRPMLockfile } from '../../manager/rpm/schema';
 import type { RedHatRPMLockfileDefinition } from '../../manager/rpm/schema';
 import { Datasource } from '../datasource';
 import type { GetReleasesConfig, ReleaseResult } from '../types';
-import { api } from '../../versioning/rpm';
 
 export class RPMLockfileDatasource extends Datasource {
   static readonly id = 'rpm-lockfile';
@@ -61,11 +60,6 @@ export class RPMLockfileDatasource extends Datasource {
     if (packageVersion === undefined) {
       return null;
     }
-
-    logger.debug(`RPM release: ${getReleasesConfig.packageName} -> ${packageVersion}`);
-
-    let latestVersion = packageVersion.sort((a, b) => api.sortVersions(a, b)).at(-1);
-    logger.debug(`latestVersion: ${latestVersion}`);
 
     return {
       releases: packageVersion.map(v => { return { version: v } }),

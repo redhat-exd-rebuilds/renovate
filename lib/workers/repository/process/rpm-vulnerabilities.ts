@@ -67,7 +67,7 @@ export class RpmVulnerabilities {
     );
 
     config.packageRules ??= [];
-    logger.debug({ rules: config.packageRules });
+
     for (const {
       vulnerabilities,
       versioningApi,
@@ -118,7 +118,7 @@ export class RpmVulnerabilities {
       (pFile) => (): Promise<DependencyVulnerabilities[]> =>
         this.fetchManagerPackageFileVulnerabilities(managerConfig, pFile),
     );
-    logger.debug(
+    logger.trace(
       { manager, queueLength: queue.length },
       'fetchManagerVulnerabilities starting',
     );
@@ -157,9 +157,9 @@ export class RpmVulnerabilities {
     dep: PackageDependency,
   ): Promise<DependencyVulnerabilities | null> {
     const ecosystem = RpmVulnerabilities.datasourceEcosystemMap[dep.datasource!];
-    logger.debug({ dep, ecosystem }, "fetchDependencyVulnerability start");
+
     if (!ecosystem) {
-      logger.debug(`Cannot map datasource ${dep.datasource!} to OSV ecosystem`);
+      logger.trace(`Cannot map datasource ${dep.datasource!} to OSV ecosystem`);
       return null;
     }
 
@@ -178,7 +178,7 @@ export class RpmVulnerabilities {
         is.nullOrUndefined(osvVulnerabilities) ||
         is.emptyArray(osvVulnerabilities)
       ) {
-        logger.debug(
+        logger.trace(
           `No vulnerabilities found in OSV database for ${packageName}`,
         );
         return null;
@@ -200,7 +200,7 @@ export class RpmVulnerabilities {
       const vulnerabilities: Vulnerability[] = [];
       for (const osvVulnerability of osvVulnerabilities) {
         if (osvVulnerability.withdrawn) {
-          logger.debug(
+          logger.trace(
             `Skipping withdrawn vulnerability ${osvVulnerability.id}`,
           );
           continue;
@@ -591,7 +591,7 @@ export class RpmVulnerabilities {
   ): SeverityDetails {
     let severityLevel = 'UNKNOWN';
     let score = 'Unknown';
-    logger.debug({ vulnerability });
+
     const cvssVector =
       vulnerability.severity?.find((e) => e.type === 'CVSS_V3')?.score ??
       vulnerability.severity?.[0]?.score ??
