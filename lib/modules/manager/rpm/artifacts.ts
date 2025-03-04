@@ -17,25 +17,26 @@ export async function updateArtifacts({
 }: UpdateArtifact): Promise<UpdateArtifactsResult[] | null> {
   logger.debug(`rpm.updateArtifacts(${packageFileName})`);
   const extension = packageFileName.split('.').pop();
-  const lockFileName = getSiblingFileName(
+  const inFileName = getSiblingFileName(
     packageFileName,
-    `rpms.lock.${extension}`,
+    `rpms.in.${extension}`,
   );
+
   const outputName = 'rpms.lock.tmp.yaml';
 
-  logger.debug(`RPM lock file: ${lockFileName}`);
+  logger.debug(`RPM lock file: ${packageFileName}`);
 
-  const existingLockFileContent = await readLocalFile(lockFileName, 'utf8');
+  const existingLockFileContent = await readLocalFile(packageFileName, 'utf8');
 
-  logger.debug(`Updating ${lockFileName}`);
+  logger.debug(`Updating ${packageFileName}`);
 
   const cmd: string[] = [];
 
   try {
-    await deleteLocalFile(lockFileName);
+    await deleteLocalFile(packageFileName);
 
     cmd.push(
-      `caching-rpm-lockfile-prototype ${packageFileName} --outfile ${lockFileName}`,
+      `caching-rpm-lockfile-prototype ${inFileName} --outfile ${packageFileName}`,
     );
 
     // Do not set cwdFile in ExecOptions, because packageFileName
@@ -49,17 +50,17 @@ export async function updateArtifacts({
     const newLockFileContent = await readLocalFile(outputName, 'utf8');
 
     if (existingLockFileContent === newLockFileContent) {
-      logger.debug(`${lockFileName} is unchanged`);
+      logger.debug(`${packageFileName} is unchanged`);
       return null;
     }
 
-    logger.debug(`Returning updated ${lockFileName}`);
+    logger.debug(`Returning updated ${packageFileName}`);
 
     return [
       {
         file: {
           type: 'addition',
-          path: lockFileName,
+          path: packageFileName,
           contents: newLockFileContent,
         },
       },
@@ -68,11 +69,11 @@ export async function updateArtifacts({
     if (err.message === TEMPORARY_ERROR) {
       throw err;
     }
-    logger.debug({ err }, `Failed to update ${lockFileName} file`);
+    logger.debug({ err }, `Failed to update ${packageFileName} file`);
     return [
       {
         artifactError: {
-          lockFile: lockFileName,
+          fileName: packageFileName,
           stderr: `${String(err.stdout)}\n${String(err.stderr)}`,
         },
       },
