@@ -25,7 +25,7 @@ describe('modules/manager/rpm/artifacts', () => {
 
       expect(
         await updateArtifacts({
-          packageFileName: 'rpms.in.yaml',
+          packageFileName: 'rpms.lock.yaml',
           updatedDeps: [],
           newPackageFileContent: '',
           config: {
@@ -34,9 +34,7 @@ describe('modules/manager/rpm/artifacts', () => {
         }),
       ).toBeNull();
 
-      expect(execSnapshots).toMatchObject([
-        { cmd: 'rpm-lockfile-prototype rpms.in.yaml' },
-      ]);
+      expect(execSnapshots).toMatchObject([]);
     });
 
     it('returns updated rpms.lock.yaml', async () => {
@@ -47,12 +45,10 @@ describe('modules/manager/rpm/artifacts', () => {
 
       expect(
         await updateArtifacts({
-          packageFileName: 'rpms.in.yaml',
+          packageFileName: 'rpms.lock.yaml',
           updatedDeps: [],
           newPackageFileContent: '',
-          config: {
-            updateType: 'lockFileMaintenance',
-          },
+          config: {},
         }),
       ).toEqual([
         {
@@ -64,9 +60,7 @@ describe('modules/manager/rpm/artifacts', () => {
         },
       ]);
 
-      expect(execSnapshots).toMatchObject([
-        { cmd: 'rpm-lockfile-prototype rpms.in.yaml' },
-      ]);
+      expect(execSnapshots).toMatchObject([]);
     });
 
     it('returns updated rpms.lock.yaml for Containerfile', async () => {
@@ -77,12 +71,10 @@ describe('modules/manager/rpm/artifacts', () => {
 
       expect(
         await updateArtifacts({
-          packageFileName: 'rpms.in.yaml',
+          packageFileName: 'rpms.lock.yaml',
           updatedDeps: [],
           newPackageFileContent: '',
-          config: {
-            updateType: 'lockFileMaintenance',
-          },
+          config: {},
         }),
       ).toEqual([
         {
@@ -94,9 +86,7 @@ describe('modules/manager/rpm/artifacts', () => {
         },
       ]);
 
-      expect(execSnapshots).toMatchObject([
-        { cmd: 'rpm-lockfile-prototype rpms.in.yaml' },
-      ]);
+      expect(execSnapshots).toMatchObject([]);
     });
   });
 });
