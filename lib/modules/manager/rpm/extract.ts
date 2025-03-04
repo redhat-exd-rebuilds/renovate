@@ -2,7 +2,6 @@ import { logger } from '../../../logger';
 import { exec } from '../../../util/exec';
 import type { ExecOptions } from '../../../util/exec/types';
 import {
-  getSiblingFileName,
   localPathExists,
   readLocalFile,
 } from '../../../util/fs';
@@ -42,12 +41,9 @@ export async function extractPackageFile(
 ): Promise<PackageFileContent | null> {
   logger.debug(`rpm.extractPackageFile(${packageFile})`);
 
-  const extension = packageFile.split('.').pop();
-  const lockFile = getSiblingFileName(packageFile, `rpms.lock.${extension}`);
+  logger.debug(`RPM lock file: ${packageFile}`);
 
-  logger.debug(`RPM lock file: ${lockFile}`);
-
-  const lockFileContent = await readLocalFile(lockFile, 'utf8');
+  const lockFileContent = await readLocalFile(packageFile, 'utf8');
   const deps: PackageDependency[] = [];
 
   if (lockFileContent !== null) {
@@ -80,7 +76,7 @@ export async function extractPackageFile(
         }
       }
     } catch (e) {
-      logger.debug({ lockFile }, `Error parsing ${lockFile}: ${e}`);
+      logger.debug({ packageFile }, `Error parsing ${packageFile}: ${e}`);
     }
   }
 
@@ -90,7 +86,7 @@ export async function extractPackageFile(
   await getUpdatedLockfile();
 
   return {
-    lockFiles: [lockFile],
+    // lockFiles: [packageFile],
     deps,
   };
 }
