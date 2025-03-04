@@ -571,17 +571,6 @@ export class RpmVulnerabilities {
         .join('\n') ?? 'No references.'
     }`;
 
-    let attribution = '';
-    if (vulnerability.id.startsWith('GHSA-')) {
-      attribution = ` and the [GitHub Advisory Database](https://github.com/github/advisory-database) ([CC-BY 4.0](https://github.com/github/advisory-database/blob/main/LICENSE.md))`;
-    } else if (vulnerability.id.startsWith('GO-')) {
-      attribution = ` and the [Go Vulnerability Database](https://github.com/golang/vulndb) ([CC-BY 4.0](https://github.com/golang/vulndb#license))`;
-    } else if (vulnerability.id.startsWith('PYSEC-')) {
-      attribution = ` and the [PyPI Advisory Database](https://github.com/pypa/advisory-database) ([CC-BY 4.0](https://github.com/pypa/advisory-database/blob/main/LICENSE))`;
-    } else if (vulnerability.id.startsWith('RUSTSEC-')) {
-      attribution = ` and the [Rust Advisory Database](https://github.com/RustSec/advisory-db) ([CC0 1.0](https://github.com/rustsec/advisory-db/blob/main/LICENSE.txt))`;
-    }
-    content += `\n\nThis data is provided by [OSV](https://osv.dev/vulnerability/${vulnerability.id})${attribution}.\n`;
     content += `</details>`;
 
     return [sanitizeMarkdown(content)];
