@@ -632,9 +632,7 @@ describe('workers/repository/process/container-vulnerabilities', () => {
               '- Vector String: `CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H`\n' +
               '\n' +
               '#### References\n' +
-              'No references.\n' +
-              '\n' +
-              'This data is provided by [OSV](https://osv.dev/vulnerability/GHSA-22cc-w7xm-rfhx) and the [GitHub Advisory Database](https://github.com/github/advisory-database) ([CC-BY 4.0](https://github.com/github/advisory-database/blob/main/LICENSE.md)).\n' +
+              'No references.' +
               '</details>',
           ],
         },
