@@ -24,21 +24,21 @@ Recommended `packageRules` configuration for the `rpm` manager:
 
 ```json
 {
-  "packageRules": [
-    {
-      "groupName": "RPM updates",
-      "matchManagers": ["rpm"],
-      "commitMessageAction": "",
-      "commitMessageTopic": "RPM updates",
-      "prTitle": "RPM updates"
+  "rpm": {
+    "packageRules": [
+      {
+        "groupName": "RPM updates",
+        "matchManagers": ["rpm"],
+        "commitMessageAction": "",
+        "commitMessageTopic": "RPM updates"
+      }
+    ],
+    "vulnerabilityAlerts": {
+      "branchTopic": "rpm-updates"
+    },
+    "lockFileMaintenance": {
+      "enabled": false
     }
-  ],
-  "lockFileMaintenance": {
-    "enabled": true,
-    "recreateWhen": "always",
-    "rebaseWhen": "behind-base-branch",
-    "branchTopic": "lock-file-maintenance",
-    "schedule": ["at any time"]
   }
 }
 ```
@@ -46,5 +46,4 @@ Recommended `packageRules` configuration for the `rpm` manager:
 This configuration ensures clean PR titles and commit messages.
 If the updates are _not_ grouped, then each PR would contain a single
 package in the description while updating the whole lockfile anyway.
-`lockFileMaintenance` is required to create a new lockfile if it doesn't
-exist yet.
+`lockFileMaintenance` must be disabled so the PRs include CVE data.
