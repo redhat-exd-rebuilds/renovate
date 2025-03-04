@@ -1,5 +1,5 @@
 import { logger } from '../../../logger';
-import { readLocalFile } from '../../../util/fs';
+import { readLocalFile, deleteLocalFile } from '../../../util/fs';
 import { parseSingleYaml } from '../../../util/yaml';
 import { RedHatRPMLockfile } from '../../manager/rpm/schema';
 import type { RedHatRPMLockfileDefinition } from '../../manager/rpm/schema';
@@ -44,6 +44,10 @@ export class RPMLockfileDatasource extends Datasource {
           this.dependencyUpdateData.set(dependency.name, [dependency.evr]);
         }
       }
+    }
+
+    if (which == 'rpms.lock.tmp.yaml') {
+      await deleteLocalFile('rpms.lock.tmp.yaml');
     }
   }
 

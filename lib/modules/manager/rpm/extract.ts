@@ -83,7 +83,7 @@ export async function extractPackageFile(
   await getUpdatedLockfile();
 
   return {
-    // lockFiles: [packageFile],
+    lockFiles: [],
     deps,
   };
 }
