@@ -1,10 +1,7 @@
 import { logger } from '../../../logger';
 import { exec } from '../../../util/exec';
 import type { ExecOptions } from '../../../util/exec/types';
-import {
-  localPathExists,
-  readLocalFile,
-} from '../../../util/fs';
+import { localPathExists, readLocalFile } from '../../../util/fs';
 import { parseSingleYaml } from '../../../util/yaml';
 import type { PackageDependency, PackageFileContent } from '../types';
 import { RedHatRPMLockfile } from './schema';
