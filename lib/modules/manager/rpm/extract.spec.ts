@@ -9,9 +9,9 @@ const lockFile0yaml = Fixtures.get('rpms.lock.0.yaml');
 describe('modules/manager/rpm/extract', () => {
   describe('extractPackageFile()', () => {
     it('returns empty dependencies for empty yaml', async () => {
-      expect(await extractPackageFile('', 'rpms.in.yaml')).toEqual({
+      expect(await extractPackageFile('', 'rpms.lock.yaml')).toEqual({
         deps: [],
-        lockFiles: ['rpms.lock.yaml'],
+        lockFiles: [],
       });
     });
 
@@ -19,7 +19,7 @@ describe('modules/manager/rpm/extract', () => {
       fs.localPathExists.mockResolvedValueOnce(true);
       fs.readLocalFile.mockResolvedValueOnce(lockFile0yaml);
 
-      const res = await extractPackageFile('', 'rpms.in.yaml');
+      const res = await extractPackageFile('', 'rpms.lock.yaml');
       expect(res?.deps).toHaveLength(24);
       expect(res).toMatchObject({
         deps: [

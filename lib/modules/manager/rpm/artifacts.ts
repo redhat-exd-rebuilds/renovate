@@ -1,9 +1,6 @@
 import { TEMPORARY_ERROR } from '../../../constants/error-messages';
 import { logger } from '../../../logger';
-import {
-  deleteLocalFile,
-  readLocalFile,
-} from '../../../util/fs';
+import { deleteLocalFile, readLocalFile } from '../../../util/fs';
 import type { UpdateArtifact, UpdateArtifactsResult } from '../types';
 
 export async function updateArtifacts({
