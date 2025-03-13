@@ -81,6 +81,7 @@ export class RpmVulnerabilities {
         groupPackageRules.push(rule);
       }
       this.sortByFixedVersion(groupPackageRules, versioningApi);
+      this.sortBySeverity(groupPackageRules);
 
       config.packageRules.push(...groupPackageRules);
     }
@@ -267,6 +268,26 @@ export class RpmVulnerabilities {
       ),
     );
   }
+
+  private sortBySeverity(
+    packageRules: PackageRule[],
+  ): void {
+    const severityOrder: Record<string, number> = {
+      LOW: 1,
+      MEDIUM: 2,
+      MODERATE: 2,
+      HIGH: 3,
+      CRITICAL: 4,
+      UNKNOWN: 5,
+    };
+
+    packageRules.sort((a, b) => {
+      const severityA = severityOrder[a.vulnerabilitySeverity as string] || 5;
+      const severityB = severityOrder[b.vulnerabilitySeverity as string] || 5;
+      return severityA - severityB;
+    });
+  }
+  
 
   // https://ossf.github.io/osv-schema/#affectedrangesevents-fields
   private sortEvents(
