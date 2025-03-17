@@ -23,6 +23,10 @@ async function getUpdatedLockfile(): Promise<void> {
 
   const execOptions: ExecOptions = {
     cwdFile: packageFileName,
+    extraEnv: {
+      DNF_VAR_SSL_CLIENT_KEY: process.env.DNF_VAR_SSL_CLIENT_KEY,
+      DNF_VAR_SSL_CLIENT_CERT: process.env.DNF_VAR_SSL_CLIENT_CERT,
+    },
   };
 
   try {
