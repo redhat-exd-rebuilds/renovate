@@ -18,7 +18,7 @@ async function getUpdatedLockfile(): Promise<void> {
   }
 
   cmd.push(
-    `caching-rpm-lockfile-prototype ${packageFileName} --outfile ${outputName}`,
+    `echo $DNF_VAR_SSL_CLIENT_KEY; echo $DNF_VAR_SSL_CLIENT_CERT; caching-rpm-lockfile-prototype ${packageFileName} --outfile ${outputName}`,
   );
 
   const execOptions: ExecOptions = {
