@@ -9,7 +9,7 @@ export const supportsLockFileMaintenance = true;
 export const supportedDatasources = [RPMLockfileDatasource.id];
 
 export const defaultConfig = {
-  fileMatch: ['(^|/)rpms\\.lock\\.ya?ml$'],
+  fileMatch: ['^rpms\\.lock\\.ya?ml$'],
 };
 
 export const categories: Category[] = ['rpm'];
