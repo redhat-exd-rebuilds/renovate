@@ -255,6 +255,8 @@ export async function lookup(
 ): Promise<ExtractResult> {
   await fetchVulnerabilities(config, packageFiles);
   await fetchUpdates(config, packageFiles);
+  await fetchContainerVulnerabilities(config, packageFiles);
+  await fetchRpmVulnerabilities(config, packageFiles);
   calculateLibYears(config, packageFiles);
   const { branches, branchList } = await branchifyUpgrades(
     config,
