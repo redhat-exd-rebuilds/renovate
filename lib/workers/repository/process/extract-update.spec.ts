@@ -139,7 +139,7 @@ describe('workers/repository/process/extract-update', () => {
       createVulnerabilitiesMock.mockResolvedValueOnce({
         appendVulnerabilityPackageRules: appendVulnerabilityPackageRulesMock,
       });
-      const appendContainerVulnerabilityPackageRulesMock = jest.fn();
+      const appendContainerVulnerabilityPackageRulesMock = vi.fn();
       createContainerVulnerabilitiesMock.mockResolvedValueOnce({
         appendVulnerabilityPackageRules:
           appendContainerVulnerabilityPackageRulesMock,

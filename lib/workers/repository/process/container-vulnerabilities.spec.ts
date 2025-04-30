@@ -1,5 +1,5 @@
 import type { Osv, OsvOffline } from '@mintmaker/osv-offline';
-import { mockFn } from 'jest-mock-extended';
+import { mockFn } from 'vitest-mock-extended';
 import type { RenovateConfig } from '../../../../test/util';
 import { logger } from '../../../../test/util';
 import { getConfig } from '../../../config/defaults';
@@ -9,9 +9,9 @@ import { ContainerVulnerabilities } from './container-vulnerabilities';
 
 const getContainerVulnerabilitiesMock =
   mockFn<typeof OsvOffline.prototype.getContainerVulnerabilities>();
-const createMock = jest.fn();
+const createMock = vi.fn();
 
-jest.mock('@mintmaker/osv-offline', () => {
+vi.mock('@mintmaker/osv-offline', () => {
   return {
     __esModule: true,
     OsvOffline: class {
@@ -22,8 +22,8 @@ jest.mock('@mintmaker/osv-offline', () => {
   };
 });
 
-jest.spyOn(DockerDatasource.prototype, 'getConfigDigest');
-jest.spyOn(DockerDatasource.prototype, 'getImageConfigFull');
+vi.spyOn(DockerDatasource.prototype, 'getConfigDigest');
+vi.spyOn(DockerDatasource.prototype, 'getImageConfigFull');
 
 describe('workers/repository/process/container-vulnerabilities', () => {
   describe('create()', () => {
@@ -195,12 +195,14 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         testVulnerability,
       ]);
 
-      const mockedGetConfigDigest = DockerDatasource.prototype
-        .getConfigDigest as jest.Mock;
+      const mockedGetConfigDigest = vi.mocked(
+        DockerDatasource.prototype.getConfigDigest,
+      );
       mockedGetConfigDigest.mockResolvedValueOnce('a1b2c3');
       mockedGetConfigDigest.mockResolvedValueOnce('d1e2f3');
-      const mockedGetImageConfigFull = DockerDatasource.prototype
-        .getImageConfigFull as jest.Mock;
+      const mockedGetImageConfigFull = vi.mocked(
+        DockerDatasource.prototype.getImageConfigFull,
+      );
       mockedGetImageConfigFull.mockResolvedValueOnce({
         statusCode: 200,
         body: JSON.stringify({ created: '2024-11-24T18:45:30.123Z' }),
@@ -272,12 +274,14 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         testVulnerability,
       ]);
 
-      const mockedGetConfigDigest = DockerDatasource.prototype
-        .getConfigDigest as jest.Mock;
+      const mockedGetConfigDigest = vi.mocked(
+        DockerDatasource.prototype.getConfigDigest,
+      );
       mockedGetConfigDigest.mockResolvedValueOnce('a1b2c3');
       mockedGetConfigDigest.mockResolvedValueOnce(null);
-      const mockedGetImageConfigFull = DockerDatasource.prototype
-        .getImageConfigFull as jest.Mock;
+      const mockedGetImageConfigFull = vi.mocked(
+        DockerDatasource.prototype.getImageConfigFull,
+      );
       mockedGetImageConfigFull.mockResolvedValueOnce({
         statusCode: 200,
         body: JSON.stringify({ created: '2024-11-24T18:45:30.123Z' }),
@@ -317,18 +321,20 @@ describe('workers/repository/process/container-vulnerabilities', () => {
       getContainerVulnerabilitiesMock.mockResolvedValueOnce([
         testVulnerability,
       ]);
-      const mockedGetConfigDigest = DockerDatasource.prototype
-        .getConfigDigest as jest.Mock;
+      const mockedGetConfigDigest = vi.mocked(
+        DockerDatasource.prototype.getConfigDigest,
+      );
       mockedGetConfigDigest.mockResolvedValueOnce('a1b2c3');
       mockedGetConfigDigest.mockResolvedValueOnce('d1e2f3');
-      const mockedGetImageConfigFull = DockerDatasource.prototype
-        .getImageConfigFull as jest.Mock;
+      const mockedGetImageConfigFull = vi.mocked(
+        DockerDatasource.prototype.getImageConfigFull,
+      );
       mockedGetImageConfigFull.mockResolvedValueOnce({
         statusCode: 200,
         body: JSON.stringify({ created: '2024-11-24T18:45:30.123Z' }),
         headers: { 'Content-Type': 'application/json' },
       });
-      mockedGetImageConfigFull.mockResolvedValueOnce(null);
+      mockedGetImageConfigFull.mockResolvedValueOnce(undefined);
 
       await vulnerabilities.appendVulnerabilityPackageRules(
         config,
@@ -363,12 +369,14 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         testVulnerability,
       ]);
 
-      const mockedGetConfigDigest = DockerDatasource.prototype
-        .getConfigDigest as jest.Mock;
+      const mockedGetConfigDigest = vi.mocked(
+        DockerDatasource.prototype.getConfigDigest,
+      );
       mockedGetConfigDigest.mockResolvedValueOnce('a1b2c3');
       mockedGetConfigDigest.mockResolvedValueOnce('d1e2f3');
-      const mockedGetImageConfigFull = DockerDatasource.prototype
-        .getImageConfigFull as jest.Mock;
+      const mockedGetImageConfigFull = vi.mocked(
+        DockerDatasource.prototype.getImageConfigFull,
+      );
       mockedGetImageConfigFull.mockResolvedValueOnce({
         statusCode: 200,
         body: JSON.stringify({ created: '2024-11-23T18:45:30.123Z' }),
@@ -413,12 +421,14 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         },
       ]);
 
-      const mockedGetConfigDigest = DockerDatasource.prototype
-        .getConfigDigest as jest.Mock;
+      const mockedGetConfigDigest = vi.mocked(
+        DockerDatasource.prototype.getConfigDigest,
+      );
       mockedGetConfigDigest.mockResolvedValueOnce('a1b2c3');
       mockedGetConfigDigest.mockResolvedValueOnce('d1e2f3');
-      const mockedGetImageConfigFull = DockerDatasource.prototype
-        .getImageConfigFull as jest.Mock;
+      const mockedGetImageConfigFull = vi.mocked(
+        DockerDatasource.prototype.getImageConfigFull,
+      );
       mockedGetImageConfigFull.mockResolvedValueOnce({
         statusCode: 200,
         body: JSON.stringify({ created: '2023-11-23T18:45:30.123Z' }),
@@ -459,12 +469,14 @@ describe('workers/repository/process/container-vulnerabilities', () => {
       const { published, ...rest } = testVulnerability;
       getContainerVulnerabilitiesMock.mockResolvedValueOnce([rest]);
 
-      const mockedGetConfigDigest = DockerDatasource.prototype
-        .getConfigDigest as jest.Mock;
+      const mockedGetConfigDigest = vi.mocked(
+        DockerDatasource.prototype.getConfigDigest,
+      );
       mockedGetConfigDigest.mockResolvedValueOnce('a1b2c3');
       mockedGetConfigDigest.mockResolvedValueOnce('d1e2f3');
-      const mockedGetImageConfigFull = DockerDatasource.prototype
-        .getImageConfigFull as jest.Mock;
+      const mockedGetImageConfigFull = vi.mocked(
+        DockerDatasource.prototype.getImageConfigFull,
+      );
       mockedGetImageConfigFull.mockResolvedValueOnce({
         statusCode: 200,
         body: JSON.stringify({ created: '2023-11-23T18:45:30.123Z' }),
@@ -506,12 +518,14 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         testVulnerability,
       ]);
 
-      const mockedGetConfigDigest = DockerDatasource.prototype
-        .getConfigDigest as jest.Mock;
+      const mockedGetConfigDigest = vi.mocked(
+        DockerDatasource.prototype.getConfigDigest,
+      );
       mockedGetConfigDigest.mockResolvedValueOnce('a1b2c3');
       mockedGetConfigDigest.mockResolvedValueOnce('d1e2f3');
-      const mockedGetImageConfigFull = DockerDatasource.prototype
-        .getImageConfigFull as jest.Mock;
+      const mockedGetImageConfigFull = vi.mocked(
+        DockerDatasource.prototype.getImageConfigFull,
+      );
       mockedGetImageConfigFull.mockResolvedValueOnce({
         statusCode: 200,
         body: JSON.stringify({ created: '2023-11-23T18:45:30.123Z' }),
@@ -582,12 +596,14 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         testVulnerability,
       ]);
 
-      const mockedGetConfigDigest = DockerDatasource.prototype
-        .getConfigDigest as jest.Mock;
+      const mockedGetConfigDigest = vi.mocked(
+        DockerDatasource.prototype.getConfigDigest,
+      );
       mockedGetConfigDigest.mockResolvedValueOnce('a1b2c3');
       mockedGetConfigDigest.mockResolvedValueOnce('d1e2f3');
-      const mockedGetImageConfigFull = DockerDatasource.prototype
-        .getImageConfigFull as jest.Mock;
+      const mockedGetImageConfigFull = vi.mocked(
+        DockerDatasource.prototype.getImageConfigFull,
+      );
       mockedGetImageConfigFull.mockResolvedValueOnce({
         statusCode: 200,
         body: JSON.stringify({ created: '2023-11-23T18:45:30.123Z' }),
@@ -664,12 +680,14 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         },
       ]);
 
-      const mockedGetConfigDigest = DockerDatasource.prototype
-        .getConfigDigest as jest.Mock;
+      const mockedGetConfigDigest = vi.mocked(
+        DockerDatasource.prototype.getConfigDigest,
+      );
       mockedGetConfigDigest.mockResolvedValueOnce('a1b2c3');
       mockedGetConfigDigest.mockResolvedValueOnce('d1e2f3');
-      const mockedGetImageConfigFull = DockerDatasource.prototype
-        .getImageConfigFull as jest.Mock;
+      const mockedGetImageConfigFull = vi.mocked(
+        DockerDatasource.prototype.getImageConfigFull,
+      );
       mockedGetImageConfigFull.mockResolvedValueOnce({
         statusCode: 200,
         body: JSON.stringify({ created: '2023-11-23T18:45:30.123Z' }),

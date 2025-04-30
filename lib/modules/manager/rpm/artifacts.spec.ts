@@ -5,7 +5,7 @@ import { GlobalConfig } from '../../../config/global';
 import type { RepoGlobalConfig } from '../../../config/types';
 import { updateArtifacts } from '.';
 
-jest.mock('../../../util/fs');
+vi.mock('../../../util/fs');
 
 const adminConfig: RepoGlobalConfig = {
   localDir: join('/tmp/github/some/repo'),

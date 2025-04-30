@@ -2,7 +2,7 @@ import { Fixtures } from '../../../../test/fixtures';
 import { fs } from '../../../../test/util';
 import { extractPackageFile } from '.';
 
-jest.mock('../../../util/fs');
+vi.mock('../../../util/fs');
 
 const lockFile0yaml = Fixtures.get('rpms.lock.0.yaml');
 

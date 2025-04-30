@@ -204,7 +204,7 @@ export class DockerDatasource extends Datasource {
       'blobs',
       configDigest,
     );
-    const result = await this.http['get'](url, { headers, noAuth: true });
+    const result = await this.http.getText(url, { headers, noAuth: true });
     return result;
   }
 
