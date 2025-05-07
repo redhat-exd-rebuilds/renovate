@@ -20,6 +20,7 @@ export async function finalizeRepo(
   await checkReconfigureBranch(config, repoConfig);
   await pruneStaleBranches(config, branchList);
   await repositoryCache.saveCache();
+  await repositoryCache.cleanup();
   await ensureIssuesClosing();
   await clearRenovateRefs();
   PackageFiles.clear();

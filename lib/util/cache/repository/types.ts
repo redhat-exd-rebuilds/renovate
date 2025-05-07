@@ -170,6 +170,7 @@ export interface RepoCache {
   save(): Promise<void>;
   getData(): RepoCacheData;
   isModified(): boolean | undefined;
+  cleanup(): Promise<void>;
 }
 
 export interface RepoCacheConfig {
