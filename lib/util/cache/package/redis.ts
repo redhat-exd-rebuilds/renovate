@@ -4,6 +4,7 @@ import { createClient, createCluster } from 'redis';
 import { logger } from '../../../logger/index.ts';
 import { compressToBase64, decompressFromBase64 } from '../../compress.ts';
 import { regEx } from '../../regex.ts';
+import { resolveTtlValues } from './ttl.ts';
 import type { PackageCacheNamespace } from './types.ts';
 
 let client:
@@ -73,13 +74,19 @@ export async function set(
   value: unknown,
   hardTtlMinutes = 5,
 ): Promise<void> {
+  const ttlValues = resolveTtlValues(namespace, ttlMinutes);
+  const effectiveTtlMinutes = Math.max(
+    ttlMinutes,
+    ttlValues.softTtlMinutes ?? 0,
+  );
+
   logger.trace(
-    { rprefix, namespace, key, hardTtlMinutes },
+    { rprefix, namespace, key, effectiveTtlMinutes },
     'Saving cached value',
   );
 
   // Redis requires TTL to be integer, not float
-  const redisTTL = Math.floor(hardTtlMinutes * 60);
+  const redisTTL = Math.floor(effectiveTtlMinutes * 60);
 
   try {
     await client?.set(
@@ -87,7 +94,7 @@ export async function set(
       JSON.stringify({
         compress: true,
         value: await compressToBase64(JSON.stringify(value)),
-        expiry: DateTime.local().plus({ minutes: hardTtlMinutes }),
+        expiry: DateTime.local().plus({ minutes: effectiveTtlMinutes }),
       }),
       { EX: redisTTL },
     );
