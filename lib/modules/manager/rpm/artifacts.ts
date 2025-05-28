@@ -22,7 +22,7 @@ export async function updateArtifacts({
     `rpms.in.${extension}`,
   );
 
-  const outputName = 'rpms.lock.tmp.yaml';
+  const outputName = 'rpms.lock.yaml';
 
   logger.debug(`RPM lock file: ${packageFileName}`);
 
