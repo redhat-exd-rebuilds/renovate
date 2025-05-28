@@ -1,6 +1,12 @@
 import { TEMPORARY_ERROR } from '../../../constants/error-messages';
 import { logger } from '../../../logger';
-import { deleteLocalFile, readLocalFile } from '../../../util/fs';
+import { exec } from '../../../util/exec';
+import type { ExecOptions } from '../../../util/exec/types';
+import {
+  deleteLocalFile,
+  getSiblingFileName,
+  readLocalFile,
+} from '../../../util/fs';
 import type { UpdateArtifact, UpdateArtifactsResult } from '../types';
 
 export async function updateArtifacts({
@@ -10,6 +16,12 @@ export async function updateArtifacts({
   config,
 }: UpdateArtifact): Promise<UpdateArtifactsResult[] | null> {
   logger.debug(`rpm.updateArtifacts(${packageFileName})`);
+  const extension = packageFileName.split('.').pop();
+  const inFileName = getSiblingFileName(
+    packageFileName,
+    `rpms.in.${extension}`,
+  );
+
   const outputName = 'rpms.lock.tmp.yaml';
 
   logger.debug(`RPM lock file: ${packageFileName}`);
@@ -18,8 +30,23 @@ export async function updateArtifacts({
 
   logger.debug(`Updating ${packageFileName}`);
 
+  const cmd: string[] = [];
+
   try {
     await deleteLocalFile(packageFileName);
+
+    cmd.push(
+      `caching-rpm-lockfile-prototype ${inFileName} --outfile ${packageFileName}`,
+    );
+
+    // Do not set cwdFile in ExecOptions, because packageFileName
+    // and lockFileName already contain the (optional) subfolder.
+    // Setting cwdFile would descend into that subfolder and
+    // we'd have it set twice.
+    const execOptions: ExecOptions = {};
+
+    await exec(cmd, execOptions);
+
     const newLockFileContent = await readLocalFile(outputName, 'utf8');
 
     if (existingLockFileContent === newLockFileContent) {
