@@ -382,6 +382,23 @@ export function generateBranchConfig(
     }
   }
 
+  // Handle vulnerability alert properties for grouped updates BEFORE compiling messages
+  config.isVulnerabilityAlert = config.upgrades.some(
+    (upgrade) => upgrade.isVulnerabilityAlert,
+  );
+
+  // If any upgrade is a vulnerability alert, preserve the security suffix and severity
+  if (config.isVulnerabilityAlert) {
+    const vulnerabilityUpgrade = config.upgrades.find(
+      (upgrade) => upgrade.isVulnerabilityAlert,
+    );
+
+    if (vulnerabilityUpgrade) {
+      config.commitMessageSuffix = vulnerabilityUpgrade.commitMessageSuffix;
+      config.vulnerabilitySeverity = vulnerabilityUpgrade.vulnerabilitySeverity;
+    }
+  }
+
   // Use templates to generate strings
   const commitMessage = compileCommitMessage(config);
   compilePrTitle(config, commitMessage);
@@ -392,6 +409,7 @@ export function generateBranchConfig(
   config.dependencyDashboardPrApproval = config.upgrades.some(
     (upgrade) => upgrade.prCreation === 'approval',
   );
+
   config.prBodyColumns = [
     ...new Set(
       config.upgrades.reduce(
