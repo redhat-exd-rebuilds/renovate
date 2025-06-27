@@ -404,11 +404,11 @@ export function generateBranchConfig(
       (highest, current) => {
         const currentPriority =
           severityPriority[
-            current.vulnerabilitySeverity?.toUpperCase() || ''
+            current.vulnerabilitySeverity?.toUpperCase() ?? ''
           ] || 0;
         const highestPriority =
           severityPriority[
-            highest.vulnerabilitySeverity?.toUpperCase() || ''
+            highest.vulnerabilitySeverity?.toUpperCase() ?? ''
           ] || 0;
 
         return currentPriority > highestPriority ? current : highest;

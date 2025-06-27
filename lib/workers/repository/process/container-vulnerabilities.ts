@@ -20,7 +20,6 @@ import { titleCase } from '../../../util/string';
 import type { ContainerVulnerability, SeverityDetails } from './types';
 
 export class ContainerVulnerabilities {
-  /* tslint:disable:no-unused-variable */
   private osvOffline: OsvOffline | undefined;
   private dockerDatasource: DockerDatasource;
 
@@ -342,7 +341,7 @@ export class ContainerVulnerabilities {
 
     const cvssVector =
       vulnerability.severity?.find((e) => e.type === 'CVSS_V3')?.score ??
-      (vulnerability.severity?.[0]?.score as string);
+      vulnerability.severity?.[0]?.score!;
 
     if (cvssVector) {
       const [baseScore, severity] = this.evaluateCvssVector(cvssVector);

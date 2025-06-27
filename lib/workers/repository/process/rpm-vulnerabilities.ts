@@ -37,8 +37,6 @@ export class RpmVulnerabilities {
     'rpm-lockfile': 'RPM',
   };
 
-  private constructor() {}
-
   private async initialize(): Promise<void> {
     // hard-coded logic to use authentication for github.com based on the githubToken for api.github.com
     const token = findGithubToken(

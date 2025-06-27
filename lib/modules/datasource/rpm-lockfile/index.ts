@@ -8,7 +8,7 @@ import type { GetReleasesConfig, ReleaseResult } from '../types';
 
 export class RPMLockfileDatasource extends Datasource {
   static readonly id = 'rpm-lockfile';
-  dependencyUpdateData: Map<string, string[]> = new Map();
+  dependencyUpdateData = new Map<string, string[]>();
   dependencyCheckInitiated = false;
 
   constructor() {
