@@ -383,20 +383,40 @@ export function generateBranchConfig(
   }
 
   // Handle vulnerability alert properties for grouped updates BEFORE compiling messages
-  config.isVulnerabilityAlert = config.upgrades.some(
-    (upgrade) => upgrade.isVulnerabilityAlert,
+  const vulnerabilityUpgrades = config.upgrades.filter(
+    (upgrade) => upgrade.isVulnerabilityAlert === true,
   );
 
-  // If any upgrade is a vulnerability alert, preserve the security suffix and severity
-  if (config.isVulnerabilityAlert) {
-    const vulnerabilityUpgrade = config.upgrades.find(
-      (upgrade) => upgrade.isVulnerabilityAlert,
+  if (vulnerabilityUpgrades.length > 0) {
+    config.isVulnerabilityAlert = true;
+
+    // Define severity priority (higher number = higher severity)
+    const severityPriority: Record<string, number> = {
+      LOW: 1,
+      MODERATE: 2,
+      MEDIUM: 2,
+      HIGH: 3,
+      CRITICAL: 4,
+    };
+
+    // Find the upgrade with the highest severity
+    const highestSeverityUpgrade = vulnerabilityUpgrades.reduce(
+      (highest, current) => {
+        const currentPriority =
+          severityPriority[
+            current.vulnerabilitySeverity?.toUpperCase() || ''
+          ] || 0;
+        const highestPriority =
+          severityPriority[
+            highest.vulnerabilitySeverity?.toUpperCase() || ''
+          ] || 0;
+
+        return currentPriority > highestPriority ? current : highest;
+      },
     );
 
-    if (vulnerabilityUpgrade) {
-      config.commitMessageSuffix = vulnerabilityUpgrade.commitMessageSuffix;
-      config.vulnerabilitySeverity = vulnerabilityUpgrade.vulnerabilitySeverity;
-    }
+    config.commitMessageSuffix = highestSeverityUpgrade.commitMessageSuffix;
+    config.vulnerabilitySeverity = highestSeverityUpgrade.vulnerabilitySeverity;
   }
 
   // Use templates to generate strings

@@ -1652,5 +1652,205 @@ describe('workers/repository/updates/generate', () => {
         prTitle: 'I3 I2 I1 Update deps',
       });
     });
+
+    it('selects highest severity when multiple vulnerability alerts are present', () => {
+      const commonOptions = {
+        ...requiredDefaultOptions,
+        manager: 'some-manager',
+        branchName: 'security-deps',
+        groupName: 'security-deps',
+        group: {
+          commitMessageTopic: '{{{groupName}}}',
+        },
+      };
+
+      const branch = [
+        {
+          ...commonOptions,
+          depName: 'normal-dep',
+          newVersion: '1.2.0',
+          newValue: '1.2.0',
+          updateType: 'minor' as UpdateType,
+        },
+        {
+          ...commonOptions,
+          depName: 'low-severity-vuln',
+          newVersion: '2.1.0',
+          newValue: '2.1.0',
+          updateType: 'major' as UpdateType,
+          isVulnerabilityAlert: true,
+          commitMessageSuffix: '[SECURITY]',
+          vulnerabilitySeverity: 'LOW',
+        },
+        {
+          ...commonOptions,
+          depName: 'high-severity-vuln',
+          newVersion: '3.0.0',
+          newValue: '3.0.0',
+          updateType: 'major' as UpdateType,
+          isVulnerabilityAlert: true,
+          commitMessageSuffix: '[SECURITY]',
+          vulnerabilitySeverity: 'HIGH',
+        },
+        {
+          ...commonOptions,
+          depName: 'critical-severity-vuln',
+          newVersion: '4.0.0',
+          newValue: '4.0.0',
+          updateType: 'major' as UpdateType,
+          isVulnerabilityAlert: true,
+          commitMessageSuffix: '[SECURITY]',
+          vulnerabilitySeverity: 'CRITICAL',
+        },
+        {
+          ...commonOptions,
+          depName: 'medium-severity-vuln',
+          newVersion: '5.0.0',
+          newValue: '5.0.0',
+          updateType: 'major' as UpdateType,
+          isVulnerabilityAlert: true,
+          commitMessageSuffix: '[SECURITY]',
+          vulnerabilitySeverity: 'MEDIUM',
+        },
+      ] satisfies BranchUpgradeConfig[];
+
+      const res = generateBranchConfig(branch);
+
+      // Should select CRITICAL as the highest severity
+      expect(res.isVulnerabilityAlert).toBe(true);
+      expect(res.vulnerabilitySeverity).toBe('CRITICAL');
+      expect(res.commitMessageSuffix).toBe('[SECURITY]');
+    });
+
+    it('handles case-insensitive severity matching', () => {
+      const commonOptions = {
+        ...requiredDefaultOptions,
+        manager: 'some-manager',
+        branchName: 'security-deps',
+        groupName: 'security-deps',
+        group: {
+          commitMessageTopic: '{{{groupName}}}',
+        },
+      };
+
+      const branch = [
+        {
+          ...commonOptions,
+          depName: 'vuln1',
+          newVersion: '1.0.0',
+          newValue: '1.0.0',
+          updateType: 'major' as UpdateType,
+          isVulnerabilityAlert: true,
+          commitMessageSuffix: '[SECURITY]',
+          vulnerabilitySeverity: 'low', // lowercase
+        },
+        {
+          ...commonOptions,
+          depName: 'vuln2',
+          newVersion: '2.0.0',
+          newValue: '2.0.0',
+          updateType: 'major' as UpdateType,
+          isVulnerabilityAlert: true,
+          commitMessageSuffix: '[SECURITY]',
+          vulnerabilitySeverity: 'High', // mixed case
+        },
+      ] satisfies BranchUpgradeConfig[];
+
+      const res = generateBranchConfig(branch);
+
+      // Should select High as the highest severity, preserving original case
+      expect(res.isVulnerabilityAlert).toBe(true);
+      expect(res.vulnerabilitySeverity).toBe('HIGH');
+    });
+
+    it('handles unknown severity levels gracefully', () => {
+      const commonOptions = {
+        ...requiredDefaultOptions,
+        manager: 'some-manager',
+        branchName: 'security-deps',
+        groupName: 'security-deps',
+        group: {
+          commitMessageTopic: '{{{groupName}}}',
+        },
+      };
+
+      const branch = [
+        {
+          ...commonOptions,
+          depName: 'vuln1',
+          newVersion: '1.0.0',
+          newValue: '1.0.0',
+          updateType: 'major' as UpdateType,
+          isVulnerabilityAlert: true,
+          commitMessageSuffix: '[SECURITY]',
+          vulnerabilitySeverity: 'UNKNOWN',
+        },
+        {
+          ...commonOptions,
+          depName: 'vuln2',
+          newVersion: '2.0.0',
+          newValue: '2.0.0',
+          updateType: 'major' as UpdateType,
+          isVulnerabilityAlert: true,
+          commitMessageSuffix: '[SECURITY]',
+          vulnerabilitySeverity: 'HIGH',
+        },
+      ] satisfies BranchUpgradeConfig[];
+
+      const res = generateBranchConfig(branch);
+
+      // Should select HIGH as it has a known severity level
+      expect(res.isVulnerabilityAlert).toBe(true);
+      expect(res.vulnerabilitySeverity).toBe('HIGH');
+    });
+
+    it('does not set isVulnerabilityAlert when no vulnerability alerts are present', () => {
+      const commonOptions = {
+        ...requiredDefaultOptions,
+        manager: 'some-manager',
+        branchName: 'normal-deps',
+        groupName: 'normal-deps',
+        group: {
+          commitMessageTopic: '{{{groupName}}}',
+        },
+      };
+
+      const branch = [
+        {
+          ...commonOptions,
+          depName: 'normal-dep1',
+          newVersion: '1.0.0',
+          newValue: '1.0.0',
+          updateType: 'major' as UpdateType,
+          // No isVulnerabilityAlert property
+        },
+        {
+          ...commonOptions,
+          depName: 'normal-dep2',
+          newVersion: '2.0.0',
+          newValue: '2.0.0',
+          updateType: 'minor' as UpdateType,
+          isVulnerabilityAlert: false, // Explicitly false
+        },
+        {
+          ...commonOptions,
+          depName: 'normal-dep3',
+          newVersion: '3.0.0',
+          newValue: '3.0.0',
+          updateType: 'patch' as UpdateType,
+          // No isVulnerabilityAlert property
+        },
+      ] satisfies BranchUpgradeConfig[];
+
+      const res = generateBranchConfig(branch);
+
+      // Should not be marked as a vulnerability alert
+      expect(res.isVulnerabilityAlert).toBeFalsy();
+      expect(res.commitMessageSuffix).toBeUndefined();
+      expect(res.vulnerabilitySeverity).toBeUndefined();
+      // Commit message should not contain SECURITY
+      expect(res.commitMessage).not.toContain('[SECURITY]');
+      expect(res.prTitle).not.toContain('[SECURITY]');
+    });
   });
 });
