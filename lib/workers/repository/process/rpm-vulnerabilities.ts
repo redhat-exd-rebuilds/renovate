@@ -68,17 +68,30 @@ export class RpmVulnerabilities {
 
     config.packageRules ??= [];
 
+    // Count total vulnerabilities to determine if we should truncate descriptions
+    const totalVulnerabilities = dependencyVulnerabilities.reduce(
+      (sum, { vulnerabilities }) => sum + vulnerabilities.length,
+      0,
+    );
+    const truncated = totalVulnerabilities > 10;
+
+    let isFirstVulnerability = true;
     for (const {
       vulnerabilities,
       versioningApi,
     } of dependencyVulnerabilities) {
       const groupPackageRules: PackageRule[] = [];
       for (const vulnerability of vulnerabilities) {
-        const rule = this.vulnerabilityToPackageRules(vulnerability);
+        const rule = this.vulnerabilityToPackageRules(
+          vulnerability,
+          truncated,
+          isFirstVulnerability,
+        );
         if (is.nullOrUndefined(rule)) {
           continue;
         }
         groupPackageRules.push(rule);
+        isFirstVulnerability = false;
       }
       this.sortByFixedVersion(groupPackageRules, versioningApi);
 
@@ -467,7 +480,11 @@ export class RpmVulnerabilities {
     );
   }
 
-  private vulnerabilityToPackageRules(vul: Vulnerability): PackageRule | null {
+  private vulnerabilityToPackageRules(
+    vul: Vulnerability,
+    truncated: boolean,
+    isFirstVulnerability: boolean,
+  ): PackageRule | null {
     const {
       vulnerability,
       affected,
@@ -500,7 +517,12 @@ export class RpmVulnerabilities {
       allowedVersions: fixedVersion,
       isVulnerabilityAlert: true,
       vulnerabilitySeverity: severityDetails.severityLevel,
-      prBodyNotes: this.generatePrBodyNotes(vulnerability, affected),
+      prBodyNotes: this.generatePrBodyNotes(
+        vulnerability,
+        affected,
+        truncated,
+        isFirstVulnerability,
+      ),
       force: {
         ...packageFileConfig.vulnerabilityAlerts,
       },
@@ -523,6 +545,8 @@ export class RpmVulnerabilities {
   private generatePrBodyNotes(
     vulnerability: Osv.Vulnerability,
     affected: Osv.Affected,
+    truncated: boolean,
+    isFirstVulnerability: boolean,
   ): string[] {
     let aliases = [vulnerability.id].concat(vulnerability.aliases ?? []).sort();
     aliases = aliases.map((id) => {
@@ -539,16 +563,24 @@ export class RpmVulnerabilities {
       return id;
     });
 
-    let content = '\n\n---\n\n### ';
+    let content = '\n\n---\n\n';
+
+    if (truncated && isFirstVulnerability) {
+      content += `> **Note:** Due to the number of vulnerabilities found, some details have been omitted from this description.\n\n`;
+    }
+
+    content += '### ';
     content += vulnerability.summary ? `${vulnerability.summary}\n` : '';
     content += `${aliases.join(' / ')}\n`;
     content += `\n<details>\n<summary>More information</summary>\n`;
 
-    const details = vulnerability.details?.replace(
-      regEx(/^#{1,4} /gm),
-      '##### ',
-    );
-    content += `#### Details\n${details ?? 'No details.'}\n`;
+    if (!truncated) {
+      const details = vulnerability.details?.replace(
+        regEx(/^#{1,4} /gm),
+        '##### ',
+      );
+      content += `#### Details\n${details ?? 'No details.'}\n\n`;
+    }
 
     content += '#### Severity\n';
     const severityDetails = this.extractSeverityDetails(
