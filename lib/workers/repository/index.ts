@@ -40,6 +40,7 @@ import { OnboardingState } from './onboarding/common';
 import { ensureOnboardingPr } from './onboarding/pr';
 import { extractDependencies, updateRepo } from './process';
 import type { ExtractResult } from './process/extract-update';
+import { createRPMLockFileVulnerabilityBranches } from './process/rpm-vuln-branches';
 import type { ProcessResult } from './result';
 import { processResult } from './result';
 
@@ -112,7 +113,11 @@ export async function renovateRepository(
     );
     addExtractionStats(config, extractResult);
 
-    const { branches, branchList, packageFiles } = extractResult;
+    const [branches, branchList] = createRPMLockFileVulnerabilityBranches(
+      extractResult.branches,
+      config,
+    );
+    const packageFiles = extractResult.packageFiles;
 
     if (config.semanticCommits === 'auto') {
       config.semanticCommits = await detectSemanticCommits();
