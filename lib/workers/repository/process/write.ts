@@ -16,6 +16,7 @@ import {
   getConcurrentPrsCount,
   getPrHourlyCount,
 } from './limits';
+import { createRPMLockFileVulnerabilityBranches } from './rpm-vuln-branches';
 
 export type WriteUpdateResult = 'done' | 'automerged';
 
@@ -116,7 +117,8 @@ export async function writeUpdates(
   config: RenovateConfig,
   allBranches: BranchConfig[],
 ): Promise<WriteUpdateResult> {
-  const branches = allBranches;
+  const branches = createRPMLockFileVulnerabilityBranches(allBranches, config);
+
   logger.debug(
     `Processing ${branches.length} branch${
       branches.length === 1 ? '' : 'es'
