@@ -8,9 +8,9 @@ import type { BranchConfig } from '../../types';
 export function createRPMLockFileVulnerabilityBranches(
   branches: BranchConfig[],
   config: RenovateConfig,
-): BranchConfig[] {
+): [BranchConfig[], string[]] {
   if (config.rpmVulnerabilityAlerts === false) {
-    return branches;
+    return [branches, branches.map((branch) => branch.branchName)];
   }
 
   const resultBranches = [...branches];
@@ -44,5 +44,6 @@ export function createRPMLockFileVulnerabilityBranches(
 
     resultBranches.push(copiedBranch);
   }
-  return resultBranches;
+  const branchNames = resultBranches.map((branch) => branch.branchName);
+  return [resultBranches, branchNames];
 }
