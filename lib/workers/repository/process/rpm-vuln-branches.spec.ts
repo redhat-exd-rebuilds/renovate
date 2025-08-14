@@ -37,8 +37,10 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
   it('returns original branches if rpmVulnerabilityAlerts is false', () => {
     const config: RenovateConfig = { rpmVulnerabilityAlerts: false } as any;
     const branches = [baseBranch];
-    const result = createRPMLockFileVulnerabilityBranches(branches, config);
-    expect(result).toBe(branches);
+    const [resultBranches, branchNames] =
+      createRPMLockFileVulnerabilityBranches(branches, config);
+    expect(resultBranches).toBe(branches);
+    expect(branchNames).toEqual(branches.map((b) => b.branchName));
   });
 
   it('returns original branches if no rpm-lockfile maintenance branch', () => {
@@ -46,17 +48,22 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
     const branches = [
       { ...baseBranch, manager: 'npm', isLockFileMaintenance: false },
     ];
-    const result = createRPMLockFileVulnerabilityBranches(branches, config);
-    expect(result).toEqual(branches);
-    expect(result).toHaveLength(1);
+    const [resultBranches, branchNames] =
+      createRPMLockFileVulnerabilityBranches(branches, config);
+    expect(resultBranches).toEqual(branches);
+    expect(resultBranches).toHaveLength(1);
+    expect(branchNames).toEqual(branches.map((b) => b.branchName));
   });
 
   it('duplicates and mutates rpm-lockfile maintenance branch', () => {
     const config: RenovateConfig = { rpmVulnerabilityAlerts: true } as any;
     const branches = [baseBranch];
-    const result = createRPMLockFileVulnerabilityBranches(branches, config);
-    expect(result).toHaveLength(2);
-    const vulnBranch = result[1];
+    const [resultBranches, branchNames] =
+      createRPMLockFileVulnerabilityBranches(branches, config);
+    expect(resultBranches).toHaveLength(2);
+    expect(branchNames).toHaveLength(2);
+    expect(branchNames).toEqual(resultBranches.map((b) => b.branchName));
+    const vulnBranch = resultBranches[1];
     expect(vulnBranch.branchName).toBe(
       'rpm-lockfile-maintenance-vulnerability',
     );
@@ -80,7 +87,7 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
     expect(vulnBranch.vulnerabilityFixStrategy).toBe('lowest');
     expect(vulnBranch.upgrades[0].vulnerabilityFixStrategy).toBe('lowest');
 
-    const origBranch = result[0];
+    const origBranch = resultBranches[0];
     expect(origBranch).toEqual(baseBranch);
   });
 });
