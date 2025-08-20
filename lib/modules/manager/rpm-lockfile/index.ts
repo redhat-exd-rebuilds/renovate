@@ -10,6 +10,9 @@ export const supportedDatasources = [RPMLockfileDatasource.id];
 
 export const defaultConfig = {
   managerFilePatterns: ['/(^|/)(rpms\\.in\\.ya?ml)$/'],
+  lockFileMaintenance: {
+    commitMessageAction: 'Refresh RPM lockfiles',
+  },
 };
 
 export const categories: Category[] = ['rpm'];
