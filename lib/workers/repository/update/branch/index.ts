@@ -55,17 +55,6 @@ async function rebaseCheck(
   config: RenovateConfig,
   branchPr: Pr,
 ): Promise<boolean> {
-  // special case: if the PR is a vulnerability alert, we always rebase.
-  // The reason is that we always want the lockfilemaintenance and post-processing
-  // code to run in these cases. This way, the PR body will always have the correct information.
-  // If this was skipped, the PR body would not have any vulnerability data
-  if (
-    config.manager === 'rpm-lockfile' &&
-    config.isLockFileMaintenance &&
-    config.isVulnerabilityAlert
-  ) {
-    return true;
-  }
   const titleRebase = branchPr.title?.startsWith('rebase!');
   if (titleRebase) {
     logger.debug(

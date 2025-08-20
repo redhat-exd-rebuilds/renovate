@@ -1261,7 +1261,7 @@ describe('workers/repository/update/branch/get-updated', () => {
         ]);
       const mockPostProcess = vi
         .spyOn(rpmVulnPostProcessing, 'postProcessRPMVulnerabilities')
-        .mockReturnValue([
+        .mockResolvedValue([
           { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
         ]);
       vi.spyOn(managerModule, 'get').mockReturnValue(mockUpdateArtifacts);

@@ -165,8 +165,13 @@ export async function writeUpdates(
       branchState,
       commitFingerprint,
     );
+    const forceRebase = Boolean(
+      branch.manager === 'rpm-lockfile' &&
+        branch.isLockFileMaintenance &&
+        branch.isVulnerabilityAlert,
+    );
 
-    const res = await processBranch(branch);
+    const res = await processBranch(branch, forceRebase);
     branch.prBlockedBy = res?.prBlockedBy;
     branch.prNo = res?.prNo;
     branch.result = res?.result;
