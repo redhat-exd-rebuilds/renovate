@@ -165,9 +165,10 @@ export class RpmVulnerabilities {
     return result.filter(is.truthy);
   }
 
-  private async fetchDependencyVulnerability(
+  async fetchDependencyVulnerability(
     packageFileConfig: RenovateConfig & PackageFile,
     dep: PackageDependency,
+    filterNonFixed = false,
   ): Promise<DependencyVulnerabilities | null> {
     const ecosystem =
       RpmVulnerabilities.datasourceEcosystemMap[dep.datasource!];
@@ -241,6 +242,23 @@ export class RpmVulnerabilities {
             affected,
             versioningApi,
           );
+
+          const parsedFixedVersion =
+            fixedVersion?.replace(/^>=\s*/, '') ?? null;
+
+          if (
+            filterNonFixed &&
+            this.isVersionGt(
+              parsedFixedVersion!,
+              dep.newVersion!,
+              versioningApi,
+            )
+          ) {
+            logger.debug(
+              `Skipping vulnerability ${osvVulnerability.id} because it is not fixed in the new version ${dep.newVersion} (${fixedVersion})`,
+            );
+            continue;
+          }
 
           vulnerabilities.push({
             packageName,
@@ -542,7 +560,7 @@ export class RpmVulnerabilities {
     return ['', ''];
   }
 
-  private generatePrBodyNotes(
+  generatePrBodyNotes(
     vulnerability: Osv.Vulnerability,
     affected: Osv.Affected,
     truncated: boolean,
