@@ -7,7 +7,7 @@ import type {
 } from '../../../../modules/manager/types';
 import * as p from '../../../../util/promises';
 import { parseSingleYaml } from '../../../../util/yaml';
-import type { BranchConfig } from '../../../types';
+import type { BranchConfig, BranchUpgradeConfig } from '../../../types';
 import { RpmVulnerabilities } from '../../process/rpm-vulnerabilities';
 import type {
   DependencyVulnerabilities,
@@ -19,6 +19,7 @@ export async function postProcessRPMVulnerabilities(
   config: BranchConfig,
 ): Promise<UpdateArtifactsResult[] | null> {
   logger.debug('RPM vulnerability post-processing');
+  const upgrade = getUpgrade(result, config);
   if (result === null) {
     logger.debug('No RPM updates have been proposed');
     return null;
@@ -42,9 +43,54 @@ export async function postProcessRPMVulnerabilities(
     return null;
   }
 
-  applyVulnerabilityPRNotes(vulnerabilities, config, rpmVulnerabilities);
+  applyVulnerabilityPRNotes(
+    vulnerabilities,
+    config,
+    upgrade,
+    rpmVulnerabilities,
+  );
 
   return result;
+}
+
+export function getUpgrade(
+  result: UpdateArtifactsResult[] | null,
+  config: BranchConfig,
+): BranchUpgradeConfig {
+  if (result === null) {
+    logger.warn('No result provided, returning first upgrade');
+    return config.upgrades[0];
+  }
+  const matchingUpgrades: BranchUpgradeConfig[] = [];
+  for (const res of result) {
+    if (res?.file?.type === 'addition') {
+      const path = res.file.path;
+
+      for (const upgrade of config.upgrades) {
+        if (upgrade.lockFiles?.includes(path)) {
+          matchingUpgrades.push(upgrade);
+        }
+      }
+    }
+  }
+
+  const uniqueUpgrades = Array.from(
+    new Map(
+      matchingUpgrades.map((upgrade) => [upgrade.packageFile, upgrade]),
+    ).values(),
+  );
+  if (uniqueUpgrades.length > 1) {
+    logger.warn(
+      `Found ${uniqueUpgrades.length} matching upgrades, returning first one`,
+    );
+    return uniqueUpgrades[0];
+  }
+  if (uniqueUpgrades.length === 0) {
+    logger.warn('No matching upgrades found, returning first upgrade');
+    return config.upgrades[0];
+  }
+
+  return uniqueUpgrades[0];
 }
 
 export function parseLockfilePackages(
@@ -151,6 +197,7 @@ export async function createVulnerabilities(
 export function applyVulnerabilityPRNotes(
   vulnerabilities: Vulnerability[],
   config: BranchConfig,
+  upgrade: BranchUpgradeConfig,
   rpmVulns: RpmVulnerabilities,
 ): void {
   // this function is called multiple times for each lockfile in a PR, so we don't know
@@ -158,7 +205,7 @@ export function applyVulnerabilityPRNotes(
   // effect where first few vulnerabilities will have a description but the rest won't.
 
   const truncated =
-    vulnerabilities.length + (config.upgrades[0].prBodyNotes?.length ?? 0) > 10;
+    vulnerabilities.length + (config.prBodyNotes?.length ?? 0) > 10;
   const prBodyNotesList: string[] = [];
 
   for (const vulnerability of vulnerabilities) {
@@ -173,8 +220,5 @@ export function applyVulnerabilityPRNotes(
   }
 
   config.prBodyNotes = [...(config.prBodyNotes ?? []), ...prBodyNotesList];
-  config.upgrades[0].prBodyNotes = [
-    ...(config.upgrades[0].prBodyNotes ?? []),
-    ...prBodyNotesList,
-  ];
+  upgrade.prBodyNotes = [...(upgrade.prBodyNotes ?? []), ...prBodyNotesList];
 }

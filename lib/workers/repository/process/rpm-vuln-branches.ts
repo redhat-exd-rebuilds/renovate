@@ -26,23 +26,35 @@ export function createRPMLockFileVulnerabilityBranches(
     const copiedBranch = clone(branch);
     // change some settings to make the it a vulnerability branch
     copiedBranch.schedule = [];
-    copiedBranch.upgrades[0].schedule = [];
     copiedBranch.branchName = `${branch.branchName}-vulnerability`;
-    copiedBranch.upgrades[0].branchName = `${branch.branchName}-vulnerability`;
     copiedBranch.branchTopic = `${branch.branchTopic}-vulnerability`;
-    copiedBranch.upgrades[0].branchTopic = `${branch.branchTopic}-vulnerability`;
     copiedBranch.commitMessage = `${branch.commitMessage} [SECURITY]`;
-    copiedBranch.upgrades[0].commitMessageSuffix = '[SECURITY]';
     copiedBranch.commitMessageSuffix = '[SECURITY]';
     copiedBranch.prTitle = `${branch.prTitle} [SECURITY]`;
     copiedBranch.isVulnerabilityAlert = true;
-    copiedBranch.upgrades[0].isVulnerabilityAlert = true;
     copiedBranch.vulnerabilitySeverity = 'UNKNOWN';
-    copiedBranch.upgrades[0].vulnerabilitySeverity = 'UNKNOWN';
     copiedBranch.vulnerabilityFixStrategy = 'lowest';
-    copiedBranch.upgrades[0].vulnerabilityFixStrategy = 'lowest';
 
-    resultBranches.push(copiedBranch);
+    // Set properties for all upgrades
+    for (const upgrade of copiedBranch.upgrades) {
+      upgrade.schedule = [];
+      upgrade.branchName = `${branch.branchName}-vulnerability`;
+      upgrade.branchTopic = `${branch.branchTopic}-vulnerability`;
+      upgrade.commitMessageSuffix = '[SECURITY]';
+      upgrade.isVulnerabilityAlert = true;
+      upgrade.vulnerabilitySeverity = 'UNKNOWN';
+      upgrade.vulnerabilityFixStrategy = 'lowest';
+    }
+
+    // Add the vulnerability branch BEFORE the original branch
+    const originalBranchIndex = resultBranches.findIndex(
+      (resultBranch) => resultBranch.branchName === branch.branchName,
+    );
+    if (originalBranchIndex === -1) {
+      resultBranches.push(copiedBranch);
+    } else {
+      resultBranches.splice(originalBranchIndex, 0, copiedBranch);
+    }
   }
   const branchNames = resultBranches.map((branch) => branch.branchName);
   return [resultBranches, branchNames];

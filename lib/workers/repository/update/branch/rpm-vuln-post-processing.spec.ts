@@ -4,6 +4,7 @@ import { RpmVulnerabilities } from '../../process/rpm-vulnerabilities';
 import {
   applyVulnerabilityPRNotes,
   createVulnerabilities,
+  getUpgrade,
   parseLockfilePackages,
   postProcessRPMVulnerabilities,
 } from './rpm-vuln-post-processing';
@@ -168,7 +169,7 @@ arches:
   });
 
   describe('applyVulnerabilityPRNotes()', () => {
-    it('appends notes to config and first upgrade', () => {
+    it('appends notes to config and upgrade', () => {
       const rpmVulns: Partial<RpmVulnerabilities> = {
         generatePrBodyNotes: vi.fn().mockReturnValue(['note-a', 'note-b']),
       } as any;
@@ -176,6 +177,8 @@ arches:
       const config: any = {
         upgrades: [{ prBodyNotes: ['existing'] }],
       };
+
+      const upgrade: any = { prBodyNotes: ['existing-upgrade'] };
 
       const vulnerabilities: any[] = [
         { vulnerability: { id: 'A' }, affected: {} },
@@ -185,6 +188,7 @@ arches:
       applyVulnerabilityPRNotes(
         vulnerabilities as any,
         config,
+        upgrade,
         rpmVulns as any,
       );
 
@@ -194,8 +198,8 @@ arches:
         'note-a',
         'note-b',
       ]);
-      expect(config.upgrades[0].prBodyNotes).toEqual([
-        'existing',
+      expect(upgrade.prBodyNotes).toEqual([
+        'existing-upgrade',
         'note-a',
         'note-b',
         'note-a',
@@ -210,8 +214,9 @@ arches:
       } as any;
 
       const config: any = {
-        upgrades: [{ prBodyNotes: new Array(9).fill('e') }],
+        prBodyNotes: new Array(9).fill('e'),
       };
+      const upgrade: any = { prBodyNotes: [] };
       const vulnerabilities: any[] = [
         { vulnerability: { id: 'A' }, affected: {} },
         { vulnerability: { id: 'B' }, affected: {} },
@@ -220,6 +225,7 @@ arches:
       applyVulnerabilityPRNotes(
         vulnerabilities as any,
         config,
+        upgrade,
         rpmVulns as any,
       );
 
@@ -228,6 +234,240 @@ arches:
       const args = gen.mock.calls[0];
       expect(args[2]).toBe(true);
       expect(args[3]).toBe(false);
+    });
+  });
+
+  describe('getUpgrade()', () => {
+    it('returns first upgrade when result is null', () => {
+      const config: any = {
+        upgrades: [
+          { packageFile: 'package1.spec', lockFiles: ['lock1.yaml'] },
+          { packageFile: 'package2.spec', lockFiles: ['lock2.yaml'] },
+        ],
+      };
+
+      const upgrade = getUpgrade(null, config);
+      expect(upgrade).toBe(config.upgrades[0]);
+    });
+
+    it('finds matching upgrades based on lockFiles paths', () => {
+      const result = [
+        {
+          file: {
+            type: 'addition',
+            path: 'packages.lock.yaml',
+            previousContents: 'old',
+            contents: 'new',
+          },
+        },
+      ];
+
+      const config: any = {
+        upgrades: [
+          {
+            packageFile: 'package1.in.yaml',
+            lockFiles: ['different.lock.yaml'],
+          },
+          {
+            packageFile: 'package2.in.yaml',
+            lockFiles: ['packages.lock.yaml'],
+          },
+        ],
+      };
+
+      const upgrade = getUpgrade(result as any, config);
+      expect(upgrade).toBe(config.upgrades[1]);
+    });
+
+    it('returns first upgrade when no matching upgrades found', () => {
+      const result = [
+        {
+          file: {
+            type: 'addition',
+            path: 'unmatched.lock.yaml',
+            previousContents: 'old',
+            contents: 'new',
+          },
+        },
+      ];
+
+      const config: any = {
+        upgrades: [
+          {
+            packageFile: 'package1.spec',
+            lockFiles: ['different.lock.yaml'],
+          },
+          {
+            packageFile: 'package2.spec',
+            lockFiles: ['another.lock.yaml'],
+          },
+        ],
+      };
+
+      const upgrade = getUpgrade(result as any, config);
+      expect(upgrade).toBe(config.upgrades[0]);
+    });
+
+    it('handles multiple matching upgrades and returns first unique one', () => {
+      const result = [
+        {
+          file: {
+            type: 'addition',
+            path: 'packages.lock.yaml',
+            previousContents: 'old',
+            contents: 'new',
+          },
+        },
+      ];
+
+      const config: any = {
+        upgrades: [
+          {
+            packageFile: 'package1.in.yaml',
+            lockFiles: ['packages.lock.yaml'],
+          },
+          {
+            packageFile: 'package1.in.yaml',
+            lockFiles: ['packages.lock.yaml'],
+          },
+          {
+            packageFile: 'package2.in.yaml',
+            lockFiles: ['packages.lock.yaml'],
+          },
+        ],
+      };
+
+      const upgrade = getUpgrade(result as any, config);
+      expect(upgrade.packageFile).toBe('package1.in.yaml');
+      expect(upgrade.lockFiles).toEqual(['packages.lock.yaml']);
+    });
+
+    it('deduplicates by packageFile and returns first when multiple unique matches', () => {
+      const result = [
+        {
+          file: {
+            type: 'addition',
+            path: 'packages.lock.yaml',
+            previousContents: 'old',
+            contents: 'new',
+          },
+        },
+      ];
+
+      const config: any = {
+        upgrades: [
+          {
+            packageFile: 'package1.in.yaml',
+            lockFiles: ['packages.lock.yaml'],
+          },
+          {
+            packageFile: 'package2.in.yaml',
+            lockFiles: ['packages.lock.yaml'],
+          },
+          {
+            packageFile: 'package3.in.yaml',
+            lockFiles: ['packages.lock.yaml'],
+          },
+        ],
+      };
+
+      const upgrade = getUpgrade(result as any, config);
+      // Should return the first upgrade when multiple unique upgrades match
+      expect(upgrade).toBe(config.upgrades[0]);
+    });
+
+    it('ignores non-addition file types', () => {
+      const result = [
+        {
+          file: {
+            type: 'deletion',
+            path: 'packages.lock.yaml',
+          },
+        },
+        {
+          file: {
+            type: 'modification',
+            path: 'other.lock.yaml',
+          },
+        },
+      ];
+
+      const config: any = {
+        upgrades: [
+          {
+            packageFile: 'package1.in.yaml',
+            lockFiles: ['packages.lock.yaml'],
+          },
+          {
+            packageFile: 'package2.in.yaml',
+            lockFiles: ['other.lock.yaml'],
+          },
+        ],
+      };
+
+      const upgrade = getUpgrade(result as any, config);
+      // Should fall back to first upgrade since only addition files are processed
+      expect(upgrade).toBe(config.upgrades[0]);
+    });
+
+    it('handles upgrades without lockFiles property', () => {
+      const result = [
+        {
+          file: {
+            type: 'addition',
+            path: 'packages.lock.yaml',
+            previousContents: 'old',
+            contents: 'new',
+          },
+        },
+      ];
+
+      const config: any = {
+        upgrades: [
+          {
+            packageFile: 'package1.in.yaml',
+            // No lockFiles property
+          },
+          {
+            packageFile: 'package2.in.yaml',
+            lockFiles: ['packages.lock.yaml'],
+          },
+        ],
+      };
+
+      const upgrade = getUpgrade(result as any, config);
+      // Should find the upgrade with matching lockFiles
+      expect(upgrade).toBe(config.upgrades[1]);
+    });
+
+    it('handles empty lockFiles array', () => {
+      const result = [
+        {
+          file: {
+            type: 'addition',
+            path: 'packages.lock.yaml',
+            previousContents: 'old',
+            contents: 'new',
+          },
+        },
+      ];
+
+      const config: any = {
+        upgrades: [
+          {
+            packageFile: 'package1.in.yaml',
+            lockFiles: [],
+          },
+          {
+            packageFile: 'package2.in.yaml',
+            lockFiles: ['packages.lock.yaml'],
+          },
+        ],
+      };
+
+      const upgrade = getUpgrade(result as any, config);
+      // Should find the upgrade with matching lockFiles
+      expect(upgrade).toBe(config.upgrades[1]);
     });
   });
 
@@ -305,7 +545,15 @@ arches:
       } as any;
       vi.spyOn(RpmVulnerabilities, 'create').mockResolvedValue(fake as any);
 
-      const cfg: any = { upgrades: [{}] };
+      const cfg: any = {
+        upgrades: [
+          {
+            packageFile: 'package.spec',
+            lockFiles: ['packages.lock.yaml'],
+            prBodyNotes: [],
+          },
+        ],
+      };
       const results = buildLockfileResult('1.0', '1.1');
       const res = await postProcessRPMVulnerabilities(results as any, cfg);
       expect(res).toBe(results as any);

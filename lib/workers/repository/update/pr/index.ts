@@ -290,8 +290,17 @@ export async function ensurePr(
 
   // Get changelog and then generate template strings
   for (const upgrade of upgrades) {
-    // TODO: types (#22198)
-    const upgradeKey = `${upgrade.depType!}-${upgrade.depName!}-${upgrade.manager}-${upgrade.currentVersion ?? ''}-${upgrade.currentValue ?? ''}-${upgrade.newVersion ?? ''}-${upgrade.newValue ?? ''}`;
+    let upgradeKey: string;
+    if (
+      config.manager === 'rpm-lockfile' &&
+      config.isLockFileMaintenance &&
+      config.isVulnerabilityAlert
+    ) {
+      upgradeKey = `${upgrade.packageFile!}-${upgrade.depType!}-${upgrade.depName!}-${upgrade.manager}-${upgrade.currentVersion ?? ''}-${upgrade.currentValue ?? ''}-${upgrade.newVersion ?? ''}-${upgrade.newValue ?? ''}`;
+    } else {
+      // TODO: types (#22198)
+      upgradeKey = `${upgrade.depType!}-${upgrade.depName!}-${upgrade.manager}-${upgrade.currentVersion ?? ''}-${upgrade.currentValue ?? ''}-${upgrade.newVersion ?? ''}-${upgrade.newValue ?? ''}`;
+    }
     if (processedUpgrades.includes(upgradeKey)) {
       continue;
     }
