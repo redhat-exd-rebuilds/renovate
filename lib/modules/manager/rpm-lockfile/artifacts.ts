@@ -41,7 +41,7 @@ export async function updateArtifacts({
     await deleteLocalFile(lockFileName);
 
     cmd.push(
-      `rpm-lockfile-prototype ${packageFileName} --outfile ${lockFileName}`,
+      `caching-rpm-lockfile-prototype ${packageFileName} --outfile ${lockFileName}`,
     );
 
     // Do not set cwdFile in ExecOptions, because packageFileName
