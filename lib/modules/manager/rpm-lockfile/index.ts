@@ -1,12 +1,12 @@
 import type { Category } from '../../../constants';
+import { RpmDatasource } from '../../datasource/rpm';
 
 export { updateArtifacts } from './artifacts';
 export { extractPackageFile } from './extract';
-import { RPMLockfileDatasource } from '../../datasource/rpm-lockfile';
 
 export const supportsLockFileMaintenance = true;
 
-export const supportedDatasources = [RPMLockfileDatasource.id];
+export const supportedDatasources = [RpmDatasource.id];
 
 export const defaultConfig = {
   managerFilePatterns: ['/(^|/)(rpms\\.in\\.ya?ml)$/'],

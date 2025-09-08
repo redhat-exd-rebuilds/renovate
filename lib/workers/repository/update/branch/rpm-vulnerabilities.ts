@@ -4,28 +4,25 @@ import { OsvOffline } from '@mintmaker/osv-offline';
 import is from '@sindresorhus/is';
 import type { CvssScore } from 'vuln-vects';
 import { parseCvssVector } from 'vuln-vects';
-import { getManagerConfig, mergeChildConfig } from '../../../config';
-import type { PackageRule, RenovateConfig } from '../../../config/types';
-import { logger } from '../../../logger';
-import { getDefaultVersioning } from '../../../modules/datasource/common';
+import type { RenovateConfig } from '../../../../config/types';
+import { logger } from '../../../../logger';
+import { getDefaultVersioning } from '../../../../modules/datasource/common';
 import type {
   PackageDependency,
   PackageFile,
-} from '../../../modules/manager/types';
-import type { VersioningApi } from '../../../modules/versioning';
-// import { api } from '../../../modules/versioning/rpm';
-import { get as getVersioning } from '../../../modules/versioning';
-import { findGithubToken } from '../../../util/check-token';
-import { find } from '../../../util/host-rules';
-import { sanitizeMarkdown } from '../../../util/markdown';
-import * as p from '../../../util/promises';
-import { regEx } from '../../../util/regex';
-import { titleCase } from '../../../util/string';
+} from '../../../../modules/manager/types';
+import type { VersioningApi } from '../../../../modules/versioning';
+import { get as getVersioning } from '../../../../modules/versioning';
+import { findGithubToken } from '../../../../util/check-token';
+import { find } from '../../../../util/host-rules';
+import { sanitizeMarkdown } from '../../../../util/markdown';
+import { regEx } from '../../../../util/regex';
+import { titleCase } from '../../../../util/string';
 import type {
   DependencyVulnerabilities,
   SeverityDetails,
   Vulnerability,
-} from './types';
+} from '../../process/types';
 
 export class RpmVulnerabilities {
   private osvOffline: OsvOffline | undefined;
@@ -37,7 +34,9 @@ export class RpmVulnerabilities {
     'rpm-lockfile': 'RPM',
   };
 
-  private constructor() {}
+  private constructor() {
+    // Private constructor to prevent direct instantiation
+  }
 
   private async initialize(): Promise<void> {
     // hard-coded logic to use authentication for github.com based on the githubToken for api.github.com
@@ -55,114 +54,6 @@ export class RpmVulnerabilities {
     const instance = new RpmVulnerabilities();
     await instance.initialize();
     return instance;
-  }
-
-  async appendVulnerabilityPackageRules(
-    config: RenovateConfig,
-    packageFiles: Record<string, PackageFile[]>,
-  ): Promise<void> {
-    const dependencyVulnerabilities = await this.fetchDependencyVulnerabilities(
-      config,
-      packageFiles,
-    );
-
-    config.packageRules ??= [];
-
-    // Count total vulnerabilities to determine if we should truncate descriptions
-    const totalVulnerabilities = dependencyVulnerabilities.reduce(
-      (sum, { vulnerabilities }) => sum + vulnerabilities.length,
-      0,
-    );
-    const truncated = totalVulnerabilities > 10;
-
-    let isFirstVulnerability = true;
-    for (const {
-      vulnerabilities,
-      versioningApi,
-    } of dependencyVulnerabilities) {
-      const groupPackageRules: PackageRule[] = [];
-      for (const vulnerability of vulnerabilities) {
-        const rule = this.vulnerabilityToPackageRules(
-          vulnerability,
-          truncated,
-          isFirstVulnerability,
-        );
-        if (is.nullOrUndefined(rule)) {
-          continue;
-        }
-        groupPackageRules.push(rule);
-        isFirstVulnerability = false;
-      }
-      this.sortByFixedVersion(groupPackageRules, versioningApi);
-
-      config.packageRules.push(...groupPackageRules);
-    }
-  }
-
-  async fetchVulnerabilities(
-    config: RenovateConfig,
-    packageFiles: Record<string, PackageFile[]>,
-  ): Promise<Vulnerability[]> {
-    const groups = await this.fetchDependencyVulnerabilities(
-      config,
-      packageFiles,
-    );
-    return groups.flatMap((group) => group.vulnerabilities);
-  }
-
-  private async fetchDependencyVulnerabilities(
-    config: RenovateConfig,
-    packageFiles: Record<string, PackageFile[]>,
-  ): Promise<DependencyVulnerabilities[]> {
-    const managers = Object.keys(packageFiles);
-    const allManagerJobs = managers.map((manager) =>
-      this.fetchManagerVulnerabilities(config, packageFiles, manager),
-    );
-    return (await Promise.all(allManagerJobs)).flat();
-  }
-
-  private async fetchManagerVulnerabilities(
-    config: RenovateConfig,
-    packageFiles: Record<string, PackageFile[]>,
-    manager: string,
-  ): Promise<DependencyVulnerabilities[]> {
-    const managerConfig = getManagerConfig(config, manager);
-    const queue = packageFiles[manager].map(
-      (pFile) => (): Promise<DependencyVulnerabilities[]> =>
-        this.fetchManagerPackageFileVulnerabilities(managerConfig, pFile),
-    );
-    logger.trace(
-      { manager, queueLength: queue.length },
-      'fetchManagerVulnerabilities starting',
-    );
-    const result = (await p.all(queue)).flat();
-    logger.trace({ manager }, 'fetchManagerVulnerabilities finished');
-    return result;
-  }
-
-  private async fetchManagerPackageFileVulnerabilities(
-    managerConfig: RenovateConfig,
-    pFile: PackageFile,
-  ): Promise<DependencyVulnerabilities[]> {
-    const { packageFile } = pFile;
-    const packageFileConfig = mergeChildConfig(managerConfig, pFile);
-    const { manager } = packageFileConfig;
-    const queue = pFile.deps.map(
-      (dep) => (): Promise<DependencyVulnerabilities | null> =>
-        this.fetchDependencyVulnerability(packageFileConfig, dep),
-    );
-    logger.trace(
-      { manager, packageFile, queueLength: queue.length },
-      'fetchManagerPackageFileVulnerabilities starting with concurrency',
-    );
-
-    const result = await p.all(queue);
-    logger.trace(
-      { packageFile },
-      'fetchManagerPackageFileVulnerabilities finished',
-    );
-
-    return result.filter(is.truthy);
   }
 
   async fetchDependencyVulnerability(
@@ -280,23 +171,6 @@ export class RpmVulnerabilities {
       );
       return null;
     }
-  }
-
-  private sortByFixedVersion(
-    packageRules: PackageRule[],
-    versioningApi: VersioningApi,
-  ): void {
-    const versionsCleaned: Record<string, string> = {};
-    for (const rule of packageRules) {
-      const version = rule.allowedVersions as string;
-      versionsCleaned[version] = version.replace(regEx(/[(),=> ]+/g), '');
-    }
-    packageRules.sort((a, b) =>
-      versioningApi.sortVersions(
-        versionsCleaned[a.allowedVersions as string],
-        versionsCleaned[b.allowedVersions as string],
-      ),
-    );
   }
 
   // https://ossf.github.io/osv-schema/#affectedrangesevents-fields
@@ -498,55 +372,6 @@ export class RpmVulnerabilities {
     );
   }
 
-  private vulnerabilityToPackageRules(
-    vul: Vulnerability,
-    truncated: boolean,
-    isFirstVulnerability: boolean,
-  ): PackageRule | null {
-    const {
-      vulnerability,
-      affected,
-      packageName,
-      depVersion,
-      fixedVersion,
-      datasource,
-      packageFileConfig,
-    } = vul;
-    if (is.nullOrUndefined(fixedVersion)) {
-      logger.debug(
-        `No fixed version available for vulnerability ${vulnerability.id} in ${packageName} ${depVersion}`,
-      );
-      return null;
-    }
-
-    logger.debug(
-      `Setting allowed version ${fixedVersion} to fix vulnerability ${vulnerability.id} in ${packageName} ${depVersion}`,
-    );
-
-    const severityDetails = this.extractSeverityDetails(
-      vulnerability,
-      affected,
-    );
-
-    return {
-      matchDatasources: [datasource],
-      matchPackageNames: [packageName],
-      matchCurrentVersion: depVersion,
-      allowedVersions: fixedVersion,
-      isVulnerabilityAlert: true,
-      vulnerabilitySeverity: severityDetails.severityLevel,
-      prBodyNotes: this.generatePrBodyNotes(
-        vulnerability,
-        affected,
-        truncated,
-        isFirstVulnerability,
-      ),
-      force: {
-        ...packageFileConfig.vulnerabilityAlerts,
-      },
-    };
-  }
-
   private evaluateCvssVector(vector: string): [string, string] {
     try {
       const parsedCvss: CvssScore = parseCvssVector(vector);
@@ -572,10 +397,10 @@ export class RpmVulnerabilities {
         return `[${id}](https://nvd.nist.gov/vuln/detail/${id})`;
       } else if (id.startsWith('GHSA-')) {
         return `[${id}](https://github.com/advisories/${id})`;
-      } else if (id.startsWith('GO-')) {
-        return `[${id}](https://pkg.go.dev/vuln/${id})`;
       } else if (id.startsWith('RUSTSEC-')) {
         return `[${id}](https://rustsec.org/advisories/${id}.html)`;
+      } else if (id.startsWith('GO-')) {
+        return `[${id}](https://pkg.go.dev/vuln/${id})`;
       }
 
       return id;

@@ -1,6 +1,5 @@
-import { RedHatRPMLockfile } from '../../../../modules/manager/rpm/schema';
+import { RedHatRPMLockfile } from '../../../../modules/manager/rpm-lockfile/schema';
 import { parseSingleYaml } from '../../../../util/yaml';
-import { RpmVulnerabilities } from '../../process/rpm-vulnerabilities';
 import {
   applyVulnerabilityPRNotes,
   createVulnerabilities,
@@ -8,6 +7,7 @@ import {
   parseLockfilePackages,
   postProcessRPMVulnerabilities,
 } from './rpm-vuln-post-processing';
+import { RpmVulnerabilities } from './rpm-vulnerabilities';
 
 describe('workers/repository/update/branch/rpm-vuln-post-processing', () => {
   describe('parseLockfilePackages()', () => {
