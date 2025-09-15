@@ -20,7 +20,7 @@ import type {
 import type { BranchConfig, BranchUpgradeConfig } from '../../../types';
 import * as _autoReplace from './auto-replace';
 import { getUpdatedPackageFiles, managerUpdateArtifacts } from './get-updated';
-import * as rpmVulnPostProcessing from './rpm-vuln-post-processing';
+import * as rpmVulnPostProcessing from './rpm-post-processing';
 import { git } from '~test/util';
 
 const bundler = vi.mocked(_bundler);
@@ -1269,7 +1269,7 @@ describe('workers/repository/update/branch/get-updated', () => {
       expect(result).toBeNull();
     });
 
-    it('calls postProcessRPMVulnerabilities for rpm-lockfile manager', async () => {
+    it('calls postProcessRPMs for rpm-lockfile manager', async () => {
       const rpmConfig = {
         isLockFileMaintenance: true,
         isVulnerabilityAlert: true,
@@ -1280,7 +1280,38 @@ describe('workers/repository/update/branch/get-updated', () => {
           { file: { path: 'file', contents: 'abc', type: 'addition' } },
         ]);
       const mockPostProcess = vi
-        .spyOn(rpmVulnPostProcessing, 'postProcessRPMVulnerabilities')
+        .spyOn(rpmVulnPostProcessing, 'postProcessRPMs')
+        .mockResolvedValue([
+          { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
+        ]);
+      vi.spyOn(managerModule, 'get').mockReturnValue(mockUpdateArtifacts);
+      const result = await managerUpdateArtifacts(
+        'rpm-lockfile',
+        updateArtifact,
+        rpmConfig as any,
+      );
+      expect(mockUpdateArtifacts).toHaveBeenCalledWith(updateArtifact);
+      expect(mockPostProcess).toHaveBeenCalledWith(
+        [{ file: { path: 'file', contents: 'abc', type: 'addition' } }],
+        rpmConfig,
+      );
+      expect(result).toEqual([
+        { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
+      ]);
+    });
+
+    it('calls postProcessRPMs for rpm-lockfile manager even without vulnerability alert', async () => {
+      const rpmConfig = {
+        isLockFileMaintenance: true,
+        isVulnerabilityAlert: false,
+      };
+      const mockUpdateArtifacts = vi
+        .fn()
+        .mockResolvedValue([
+          { file: { path: 'file', contents: 'abc', type: 'addition' } },
+        ]);
+      const mockPostProcess = vi
+        .spyOn(rpmVulnPostProcessing, 'postProcessRPMs')
         .mockResolvedValue([
           { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
         ]);

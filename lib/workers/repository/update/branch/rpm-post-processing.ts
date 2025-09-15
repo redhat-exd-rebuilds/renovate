@@ -14,11 +14,11 @@ import type {
   Vulnerability,
 } from '../../process/types';
 
-export async function postProcessRPMVulnerabilities(
+export async function postProcessRPMs(
   result: UpdateArtifactsResult[] | null,
   config: BranchConfig,
 ): Promise<UpdateArtifactsResult[] | null> {
-  logger.debug('RPM vulnerability post-processing');
+  logger.debug('RPM lockfile maintenance post-processing');
   const upgrade = getUpgrade(result, config);
   if (result === null) {
     logger.debug('No RPM updates have been proposed');
@@ -29,6 +29,11 @@ export async function postProcessRPMVulnerabilities(
   if (packages.length === 0) {
     logger.warn('No RPM packages could be parsed');
     return null;
+  }
+
+  // skipping the rest of the logic if it's not a vulnerability alert
+  if (!config.isVulnerabilityAlert) {
+    return result;
   }
 
   const rpmVulnerabilities = await RpmVulnerabilities.create();

@@ -17,7 +17,7 @@ import type { FileAddition, FileChange } from '../../../../util/git/types';
 import { coerceString } from '../../../../util/string';
 import type { BranchConfig, BranchUpgradeConfig } from '../../../types';
 import { doAutoReplace } from './auto-replace';
-import { postProcessRPMVulnerabilities } from './rpm-vuln-post-processing';
+import { postProcessRPMs } from './rpm-post-processing';
 
 export interface PackageFilesResult {
   artifactErrors: ArtifactError[];
@@ -500,12 +500,8 @@ export async function managerUpdateArtifacts(
   }
 
   const result = await updateArtifacts(updateArtifact);
-  if (
-    manager === 'rpm-lockfile' &&
-    config.isLockFileMaintenance &&
-    config.isVulnerabilityAlert
-  ) {
-    return postProcessRPMVulnerabilities(result, config);
+  if (manager === 'rpm-lockfile' && config.isLockFileMaintenance) {
+    return postProcessRPMs(result, config);
   } else {
     return result;
   }

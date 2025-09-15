@@ -6,10 +6,10 @@ import {
   createVulnerabilities,
   getUpgrade,
   parseLockfilePackages,
-  postProcessRPMVulnerabilities,
-} from './rpm-vuln-post-processing';
+  postProcessRPMs,
+} from './rpm-post-processing';
 
-describe('workers/repository/update/branch/rpm-vuln-post-processing', () => {
+describe('workers/repository/update/branch/rpm-post-processing', () => {
   describe('parseLockfilePackages()', () => {
     const oldYaml = `
 lockfileVersion: 1
@@ -471,7 +471,7 @@ arches:
     });
   });
 
-  describe('postProcessRPMVulnerabilities()', () => {
+  describe('postProcessRPMs()', () => {
     const buildLockfileResult = (oldEvr: string, newEvr: string) => {
       const oldYaml = `
 lockfileVersion: 1
@@ -502,7 +502,7 @@ arches:
 
     it('returns null when result is null', async () => {
       const cfg: any = { upgrades: [{}] };
-      const res = await postProcessRPMVulnerabilities(null, cfg);
+      const res = await postProcessRPMs(null, cfg);
       expect(res).toBeNull();
     });
 
@@ -516,8 +516,18 @@ arches:
           },
         },
       ];
-      const res = await postProcessRPMVulnerabilities(results as any, cfg);
+      const res = await postProcessRPMs(results as any, cfg);
       expect(res).toBeNull();
+    });
+
+    it('returns original result when isVulnerabilityAlert is false', async () => {
+      const cfg: any = {
+        upgrades: [{}],
+        isVulnerabilityAlert: false,
+      };
+      const results = buildLockfileResult('1.0', '1.1');
+      const res = await postProcessRPMs(results as any, cfg);
+      expect(res).toBe(results as any);
     });
 
     it('returns null when no vulnerabilities found', async () => {
@@ -527,9 +537,9 @@ arches:
       } as any;
       vi.spyOn(RpmVulnerabilities, 'create').mockResolvedValue(fake as any);
 
-      const cfg: any = { upgrades: [{}] };
+      const cfg: any = { upgrades: [{}], isVulnerabilityAlert: true };
       const results = buildLockfileResult('1.0', '1.1');
-      const res = await postProcessRPMVulnerabilities(results as any, cfg);
+      const res = await postProcessRPMs(results as any, cfg);
       expect(res).toBeNull();
     });
 
@@ -546,6 +556,7 @@ arches:
       vi.spyOn(RpmVulnerabilities, 'create').mockResolvedValue(fake as any);
 
       const cfg: any = {
+        isVulnerabilityAlert: true,
         upgrades: [
           {
             packageFile: 'package.spec',
@@ -555,7 +566,7 @@ arches:
         ],
       };
       const results = buildLockfileResult('1.0', '1.1');
-      const res = await postProcessRPMVulnerabilities(results as any, cfg);
+      const res = await postProcessRPMs(results as any, cfg);
       expect(res).toBe(results as any);
       expect(cfg.prBodyNotes).toEqual(['note', 'note']);
       expect(cfg.upgrades[0].prBodyNotes).toEqual(['note', 'note']);
