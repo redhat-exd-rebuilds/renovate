@@ -6,6 +6,7 @@ import type {
   UpdateArtifactsResult,
 } from '../../../../modules/manager/types';
 import * as p from '../../../../util/promises';
+import { severityOrder } from '../../../../util/vulnerability/utils';
 import { parseSingleYaml } from '../../../../util/yaml';
 import type { BranchConfig, BranchUpgradeConfig } from '../../../types';
 import { RpmVulnerabilities } from '../../process/rpm-vulnerabilities';
@@ -49,6 +50,13 @@ export async function postProcessRPMs(
   }
 
   applyVulnerabilityPRNotes(
+    vulnerabilities,
+    config,
+    upgrade,
+    rpmVulnerabilities,
+  );
+
+  determineSeverityAutomerge(
     vulnerabilities,
     config,
     upgrade,
@@ -226,4 +234,85 @@ export function applyVulnerabilityPRNotes(
 
   config.prBodyNotes = [...(config.prBodyNotes ?? []), ...prBodyNotesList];
   upgrade.prBodyNotes = [...(upgrade.prBodyNotes ?? []), ...prBodyNotesList];
+}
+
+export function determineSeverityAutomerge(
+  vulnerabilities: Vulnerability[],
+  config: BranchConfig,
+  upgrade: BranchUpgradeConfig,
+  rpmVulns: RpmVulnerabilities,
+): void {
+  let highestSeverity: string | null = null;
+
+  for (const vulnerability of vulnerabilities) {
+    const severityDetails = rpmVulns.extractSeverityDetails(
+      vulnerability.vulnerability,
+      vulnerability.affected,
+    );
+
+    const vulnerabilitySeverity = severityDetails.severityLevel.toUpperCase();
+
+    if (
+      highestSeverity === null ||
+      severityOrder[vulnerabilitySeverity] > severityOrder[highestSeverity]
+    ) {
+      highestSeverity = vulnerabilitySeverity;
+    }
+  }
+
+  if (highestSeverity !== null) {
+    upgrade.vulnerabilitySeverity = highestSeverity;
+  }
+
+  for (const configUpgrade of config.upgrades) {
+    if (configUpgrade.vulnerabilitySeverity) {
+      const configSeverity = configUpgrade.vulnerabilitySeverity.toUpperCase();
+      if (
+        highestSeverity === null ||
+        severityOrder[configSeverity] > severityOrder[highestSeverity]
+      ) {
+        highestSeverity = configSeverity;
+      }
+    }
+  }
+
+  if (config.rpmVulnerabilityAutomerge !== undefined) {
+    const validValues = ['ALL', 'MEDIUM', 'HIGH', 'CRITICAL'];
+    const configValue = config.rpmVulnerabilityAutomerge;
+
+    if (
+      configValue !== null &&
+      (typeof configValue !== 'string' ||
+        !validValues.includes(configValue.toUpperCase()))
+    ) {
+      logger.warn(
+        `Invalid rpmVulnerabilityAutomerge value: ${configValue}. Valid values are: ALL, MEDIUM, HIGH, CRITICAL`,
+      );
+    } else if (
+      config.rpmVulnerabilityAutomerge !== null &&
+      highestSeverity !== null
+    ) {
+      if (config.rpmVulnerabilityAutomerge.toUpperCase() === 'ALL') {
+        logger.debug(
+          `Setting RPM vulnerability automerge to true ` +
+            `(rpmVulnerabilityAutomerge: ${config.rpmVulnerabilityAutomerge}, ` +
+            `highestSeverity: ${highestSeverity})`,
+        );
+        config.automerge = true;
+      } else {
+        const configSeverityLevel =
+          severityOrder[config.rpmVulnerabilityAutomerge.toUpperCase()];
+        const highestSeverityLevel = severityOrder[highestSeverity];
+
+        if (highestSeverityLevel >= configSeverityLevel) {
+          logger.debug(
+            `Setting RPM vulnerability automerge to true ` +
+              `(rpmVulnerabilityAutomerge: ${config.rpmVulnerabilityAutomerge}, ` +
+              `highestSeverity: ${highestSeverity})`,
+          );
+          config.automerge = true;
+        }
+      }
+    }
+  }
 }

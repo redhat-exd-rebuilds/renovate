@@ -21,7 +21,6 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
         schedule: ['after 1am'],
         commitMessageSuffix: '',
         isVulnerabilityAlert: false,
-        vulnerabilitySeverity: undefined,
         vulnerabilityFixStrategy: undefined,
       },
     ],
@@ -30,7 +29,6 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
     commitMessageSuffix: '',
     prTitle: 'chore: rpm lockfile maintenance',
     isVulnerabilityAlert: false,
-    vulnerabilitySeverity: undefined,
     vulnerabilityFixStrategy: undefined,
   };
 
@@ -84,8 +82,6 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
     );
     expect(vulnBranch.isVulnerabilityAlert).toBe(true);
     expect(vulnBranch.upgrades[0].isVulnerabilityAlert).toBe(true);
-    expect(vulnBranch.vulnerabilitySeverity).toBe('UNKNOWN');
-    expect(vulnBranch.upgrades[0].vulnerabilitySeverity).toBe('UNKNOWN');
     expect(vulnBranch.vulnerabilityFixStrategy).toBe('lowest');
     expect(vulnBranch.upgrades[0].vulnerabilityFixStrategy).toBe('lowest');
 
@@ -159,5 +155,36 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
     // Vulnerability branch should have modified properties
     expect(vulnBranch.schedule).toEqual([]);
     expect(vulnBranch.isVulnerabilityAlert).toBe(true);
+  });
+
+  it('sets rpmVulnerabilityAutomerge from config', () => {
+    const config: RenovateConfig = {
+      rpmVulnerabilityAlerts: true,
+      rpmVulnerabilityAutomerge: 'HIGH',
+    } as any;
+    const branches = [baseBranch];
+
+    const [resultBranches] = createRPMLockFileVulnerabilityBranches(
+      branches,
+      config,
+    );
+
+    const vulnBranch = resultBranches[0];
+    expect(vulnBranch.rpmVulnerabilityAutomerge).toBe('HIGH');
+  });
+
+  it('sets rpmVulnerabilityAutomerge to undefined when config is undefined', () => {
+    const config: RenovateConfig = {
+      rpmVulnerabilityAlerts: true,
+    } as any;
+    const branches = [baseBranch];
+
+    const [resultBranches] = createRPMLockFileVulnerabilityBranches(
+      branches,
+      config,
+    );
+
+    const vulnBranch = resultBranches[0];
+    expect(vulnBranch.rpmVulnerabilityAutomerge).toBe(undefined);
   });
 });

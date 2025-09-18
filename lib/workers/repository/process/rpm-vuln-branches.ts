@@ -32,8 +32,8 @@ export function createRPMLockFileVulnerabilityBranches(
     copiedBranch.commitMessageSuffix = '[SECURITY]';
     copiedBranch.prTitle = `${branch.prTitle} [SECURITY]`;
     copiedBranch.isVulnerabilityAlert = true;
-    copiedBranch.vulnerabilitySeverity = 'UNKNOWN';
     copiedBranch.vulnerabilityFixStrategy = 'lowest';
+    copiedBranch.rpmVulnerabilityAutomerge = config.rpmVulnerabilityAutomerge;
 
     // Set properties for all upgrades
     for (const upgrade of copiedBranch.upgrades) {
@@ -42,7 +42,6 @@ export function createRPMLockFileVulnerabilityBranches(
       upgrade.branchTopic = `${branch.branchTopic}-vulnerability`;
       upgrade.commitMessageSuffix = '[SECURITY]';
       upgrade.isVulnerabilityAlert = true;
-      upgrade.vulnerabilitySeverity = 'UNKNOWN';
       upgrade.vulnerabilityFixStrategy = 'lowest';
     }
 

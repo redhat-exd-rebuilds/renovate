@@ -4,6 +4,7 @@ import { RpmVulnerabilities } from '../../process/rpm-vulnerabilities';
 import {
   applyVulnerabilityPRNotes,
   createVulnerabilities,
+  determineSeverityAutomerge,
   getUpgrade,
   parseLockfilePackages,
   postProcessRPMs,
@@ -471,6 +472,349 @@ arches:
     });
   });
 
+  describe('determineSeverityAutomerge()', () => {
+    const mockRpmVulns = {
+      extractSeverityDetails: vi.fn(),
+    } as any;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should set vulnerabilitySeverity to highest severity from vulnerabilities', () => {
+      const vulnerabilities = [
+        { vulnerability: { id: 'VULN-1' }, affected: {} },
+        { vulnerability: { id: 'VULN-2' }, affected: {} },
+      ] as any;
+
+      mockRpmVulns.extractSeverityDetails
+        .mockReturnValueOnce({ severityLevel: 'medium' })
+        .mockReturnValueOnce({ severityLevel: 'high' });
+
+      const config: any = { upgrades: [] };
+      const upgrade: any = {};
+
+      determineSeverityAutomerge(
+        vulnerabilities,
+        config,
+        upgrade,
+        mockRpmVulns,
+      );
+
+      expect(upgrade.vulnerabilitySeverity).toBe('HIGH');
+    });
+
+    it('should handle empty vulnerabilities array', () => {
+      const vulnerabilities: any[] = [];
+      const config: any = { upgrades: [] };
+      const upgrade: any = {};
+
+      determineSeverityAutomerge(
+        vulnerabilities,
+        config,
+        upgrade,
+        mockRpmVulns,
+      );
+
+      expect(upgrade.vulnerabilitySeverity).toBeUndefined();
+    });
+
+    describe('automerge behavior', () => {
+      it('should enable automerge when rpmVulnerabilityAutomerge is "ALL" and vulnerabilities exist', () => {
+        const vulnerabilities = [
+          { vulnerability: { id: 'VULN-1' }, affected: {} },
+        ] as any;
+
+        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+          severityLevel: 'low',
+        });
+
+        const config: any = {
+          rpmVulnerabilityAutomerge: 'ALL',
+          upgrades: [],
+        };
+        const upgrade: any = {};
+
+        determineSeverityAutomerge(
+          vulnerabilities,
+          config,
+          upgrade,
+          mockRpmVulns,
+        );
+
+        expect(config.automerge).toBe(true);
+        expect(upgrade.vulnerabilitySeverity).toBe('LOW');
+      });
+
+      it('should not enable automerge when rpmVulnerabilityAutomerge is "ALL" but no vulnerabilities', () => {
+        const vulnerabilities: any[] = [];
+        const config: any = {
+          rpmVulnerabilityAutomerge: 'ALL',
+          upgrades: [],
+        };
+        const upgrade: any = {};
+
+        determineSeverityAutomerge(
+          vulnerabilities,
+          config,
+          upgrade,
+          mockRpmVulns,
+        );
+
+        expect(config.automerge).toBeUndefined();
+      });
+
+      it('should enable automerge when severity meets threshold for MEDIUM', () => {
+        const vulnerabilities = [
+          { vulnerability: { id: 'VULN-1' }, affected: {} },
+        ] as any;
+
+        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+          severityLevel: 'high',
+        });
+
+        const config: any = {
+          rpmVulnerabilityAutomerge: 'MEDIUM',
+          upgrades: [],
+        };
+        const upgrade: any = {};
+
+        determineSeverityAutomerge(
+          vulnerabilities,
+          config,
+          upgrade,
+          mockRpmVulns,
+        );
+
+        expect(config.automerge).toBe(true);
+        expect(upgrade.vulnerabilitySeverity).toBe('HIGH');
+      });
+
+      it('should not enable automerge when severity below threshold for HIGH', () => {
+        const vulnerabilities = [
+          { vulnerability: { id: 'VULN-1' }, affected: {} },
+        ] as any;
+
+        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+          severityLevel: 'medium',
+        });
+
+        const config: any = {
+          rpmVulnerabilityAutomerge: 'HIGH',
+          upgrades: [],
+        };
+        const upgrade: any = {};
+
+        determineSeverityAutomerge(
+          vulnerabilities,
+          config,
+          upgrade,
+          mockRpmVulns,
+        );
+
+        expect(config.automerge).toBeUndefined();
+        expect(upgrade.vulnerabilitySeverity).toBe('MEDIUM');
+      });
+
+      it('should enable automerge when severity equals threshold', () => {
+        const vulnerabilities = [
+          { vulnerability: { id: 'VULN-1' }, affected: {} },
+        ] as any;
+
+        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+          severityLevel: 'critical',
+        });
+
+        const config: any = {
+          rpmVulnerabilityAutomerge: 'CRITICAL',
+          upgrades: [],
+        };
+        const upgrade: any = {};
+
+        determineSeverityAutomerge(
+          vulnerabilities,
+          config,
+          upgrade,
+          mockRpmVulns,
+        );
+
+        expect(config.automerge).toBe(true);
+        expect(upgrade.vulnerabilitySeverity).toBe('CRITICAL');
+      });
+
+      it('should handle case insensitive rpmVulnerabilityAutomerge config', () => {
+        const vulnerabilities = [
+          { vulnerability: { id: 'VULN-1' }, affected: {} },
+        ] as any;
+
+        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+          severityLevel: 'high',
+        });
+
+        const config: any = {
+          rpmVulnerabilityAutomerge: 'medium',
+          upgrades: [],
+        };
+        const upgrade: any = {};
+
+        determineSeverityAutomerge(
+          vulnerabilities,
+          config,
+          upgrade,
+          mockRpmVulns,
+        );
+
+        expect(config.automerge).toBe(true);
+      });
+
+      it('should not enable automerge when rpmVulnerabilityAutomerge is null', () => {
+        const vulnerabilities = [
+          { vulnerability: { id: 'VULN-1' }, affected: {} },
+        ] as any;
+
+        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+          severityLevel: 'critical',
+        });
+
+        const config: any = {
+          rpmVulnerabilityAutomerge: null,
+          upgrades: [],
+        };
+        const upgrade: any = {};
+
+        determineSeverityAutomerge(
+          vulnerabilities,
+          config,
+          upgrade,
+          mockRpmVulns,
+        );
+
+        expect(config.automerge).toBeUndefined();
+      });
+
+      it('should not enable automerge when rpmVulnerabilityAutomerge is undefined', () => {
+        const vulnerabilities = [
+          { vulnerability: { id: 'VULN-1' }, affected: {} },
+        ] as any;
+
+        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+          severityLevel: 'critical',
+        });
+
+        const config: any = {
+          upgrades: [],
+        };
+        const upgrade: any = {};
+
+        determineSeverityAutomerge(
+          vulnerabilities,
+          config,
+          upgrade,
+          mockRpmVulns,
+        );
+
+        expect(config.automerge).toBeUndefined();
+      });
+    });
+
+    describe('invalid configuration handling', () => {
+      it('should log warning for invalid string rpmVulnerabilityAutomerge value', () => {
+        const vulnerabilities = [
+          { vulnerability: { id: 'VULN-1' }, affected: {} },
+        ] as any;
+
+        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+          severityLevel: 'high',
+        });
+
+        const config: any = {
+          rpmVulnerabilityAutomerge: 'INVALID',
+          upgrades: [],
+        };
+        const upgrade: any = {};
+
+        determineSeverityAutomerge(
+          vulnerabilities,
+          config,
+          upgrade,
+          mockRpmVulns,
+        );
+
+        expect(config.automerge).toBeUndefined();
+      });
+
+      it('should handle all valid automerge values', () => {
+        const validValues = ['ALL', 'MEDIUM', 'HIGH', 'CRITICAL'];
+
+        for (const value of validValues) {
+          const vulnerabilities = [
+            { vulnerability: { id: 'VULN-1' }, affected: {} },
+          ] as any;
+
+          mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+            severityLevel: 'critical',
+          });
+
+          const config: any = {
+            rpmVulnerabilityAutomerge: value,
+            upgrades: [],
+          };
+          const upgrade: any = {};
+
+          determineSeverityAutomerge(
+            vulnerabilities,
+            config,
+            upgrade,
+            mockRpmVulns,
+          );
+
+          expect(config.automerge).toBe(true);
+
+          // Reset for next iteration
+          config.automerge = undefined;
+          vi.clearAllMocks();
+        }
+      });
+    });
+
+    describe('severity level ordering', () => {
+      it('should correctly order LOW < MEDIUM < HIGH < CRITICAL', () => {
+        const testCases = [
+          { first: 'low', second: 'medium', expected: 'MEDIUM' },
+          { first: 'medium', second: 'high', expected: 'HIGH' },
+          { first: 'high', second: 'critical', expected: 'CRITICAL' },
+          { first: 'critical', second: 'low', expected: 'CRITICAL' },
+        ];
+
+        for (const testCase of testCases) {
+          const vulnerabilities = [
+            { vulnerability: { id: 'VULN-1' }, affected: {} },
+            { vulnerability: { id: 'VULN-2' }, affected: {} },
+          ] as any;
+
+          mockRpmVulns.extractSeverityDetails
+            .mockReturnValueOnce({ severityLevel: testCase.first })
+            .mockReturnValueOnce({ severityLevel: testCase.second });
+
+          const config: any = { upgrades: [] };
+          const upgrade: any = {};
+
+          determineSeverityAutomerge(
+            vulnerabilities,
+            config,
+            upgrade,
+            mockRpmVulns,
+          );
+
+          expect(upgrade.vulnerabilitySeverity).toBe(testCase.expected);
+
+          // Reset for next iteration
+          vi.clearAllMocks();
+        }
+      });
+    });
+  });
+
   describe('postProcessRPMs()', () => {
     const buildLockfileResult = (oldEvr: string, newEvr: string) => {
       const oldYaml = `
@@ -552,6 +896,9 @@ arches:
           ],
         }),
         generatePrBodyNotes: vi.fn().mockReturnValue(['note']),
+        extractSeverityDetails: vi
+          .fn()
+          .mockReturnValue({ severityLevel: 'medium' }),
       } as any;
       vi.spyOn(RpmVulnerabilities, 'create').mockResolvedValue(fake as any);
 
@@ -570,6 +917,8 @@ arches:
       expect(res).toBe(results as any);
       expect(cfg.prBodyNotes).toEqual(['note', 'note']);
       expect(cfg.upgrades[0].prBodyNotes).toEqual(['note', 'note']);
+      // Verify determineSeverityAutomerge was called and set vulnerabilitySeverity
+      expect(cfg.upgrades[0].vulnerabilitySeverity).toBe('MEDIUM');
     });
   });
 });

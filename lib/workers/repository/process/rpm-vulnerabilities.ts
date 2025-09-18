@@ -626,7 +626,7 @@ export class RpmVulnerabilities {
     return [sanitizeMarkdown(content)];
   }
 
-  private extractSeverityDetails(
+  public extractSeverityDetails(
     vulnerability: Osv.Vulnerability,
     affected: Osv.Affected,
   ): SeverityDetails {

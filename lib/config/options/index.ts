@@ -2239,6 +2239,15 @@ const options: RenovateOptions[] = [
     experimentalIssues: [20542],
   },
   {
+    name: 'rpmVulnerabilityAutomerge',
+    description:
+      'Set at what criticality level should RPM vulnerability PRs be automerged.',
+    type: 'string',
+    default: null,
+    experimental: true,
+    allowedValues: ['ALL', 'MEDIUM', 'HIGH', 'CRITICAL'],
+  },
+  {
     name: 'pruneBranchAfterAutomerge',
     description: 'Set to `true` to enable branch pruning after automerging.',
     type: 'boolean',
