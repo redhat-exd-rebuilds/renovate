@@ -1,6 +1,6 @@
 import is from '@sindresorhus/is';
 import { logger } from '../../../../logger';
-import { RedHatRPMLockfile } from '../../../../modules/manager/rpm/schema';
+import { RedHatRPMLockfile } from '../../../../modules/manager/rpm-lockfile/schema';
 import type {
   PackageDependency,
   UpdateArtifactsResult,
@@ -9,11 +9,11 @@ import * as p from '../../../../util/promises';
 import { severityOrder } from '../../../../util/vulnerability/utils';
 import { parseSingleYaml } from '../../../../util/yaml';
 import type { BranchConfig, BranchUpgradeConfig } from '../../../types';
-import { RpmVulnerabilities } from '../../process/rpm-vulnerabilities';
 import type {
   DependencyVulnerabilities,
   Vulnerability,
 } from '../../process/types';
+import { RpmVulnerabilities } from './rpm-vulnerabilities';
 
 export async function postProcessRPMs(
   result: UpdateArtifactsResult[] | null,
