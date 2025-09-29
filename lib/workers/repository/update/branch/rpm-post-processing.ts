@@ -13,6 +13,7 @@ import type {
   DependencyVulnerabilities,
   Vulnerability,
 } from '../../process/types';
+import { getPrUpdatesTable } from '../pr/body/updates-table';
 import { RpmVulnerabilities } from './rpm-vulnerabilities';
 
 export async function postProcessRPMs(
@@ -31,6 +32,9 @@ export async function postProcessRPMs(
     logger.warn('No RPM packages could be parsed');
     return null;
   }
+
+  // Create and add updates table to PR header
+  createUpdatesTable(config, upgrade, packages);
 
   // skipping the rest of the logic if it's not a vulnerability alert
   if (!config.isVulnerabilityAlert) {
@@ -175,6 +179,70 @@ export function parseLockfilePackages(
   );
 
   return updatedPackages;
+}
+
+export function createUpdatesTable(
+  config: BranchConfig,
+  upgrade: BranchUpgradeConfig,
+  packages: PackageDependency[],
+): void {
+  if (packages.length === 0) {
+    return;
+  }
+
+  const upgrades: BranchUpgradeConfig[] = packages
+    .filter(
+      (pkg) =>
+        pkg.currentVersion &&
+        pkg.newVersion &&
+        pkg.currentVersion !== pkg.newVersion,
+    )
+    .map((pkg) => ({
+      manager: 'rpm-lockfile',
+      branchName: config.branchName,
+
+      depName: pkg.depName!,
+      depNameLinked: pkg.depName!,
+
+      displayFrom: pkg.currentVersion!,
+      displayTo: pkg.newVersion!,
+
+      prBodyDefinitions: {
+        Package: '{{{depNameLinked}}}',
+        Change: '`{{{displayFrom}}}` -> `{{{displayTo}}}`',
+      },
+    }));
+
+  if (upgrades.length === 0) {
+    return;
+  }
+
+  const dummyBranchConfig: BranchConfig = {
+    manager: config.manager,
+    branchName: config.branchName,
+    baseBranch: config.baseBranch,
+
+    prBodyColumns: ['Package', 'Change'],
+
+    upgrades,
+  };
+
+  let tableMarkdown = `File ${upgrade.packageFile}:\n\n`;
+  tableMarkdown += getPrUpdatesTable(dummyBranchConfig);
+  tableMarkdown = tableMarkdown.replace(
+    /\n\nThis PR contains the following updates:\n\n/,
+    '',
+  );
+
+  if (!config.prHeader?.includes('This PR contains the following updates:')) {
+    config.prHeader = 'This PR contains the following updates:';
+  }
+  config.prHeader += '\n\n' + tableMarkdown;
+
+  // Remove {{{table}}} from prBodyTemplate to avoid duplicate table
+  if (config.prBodyTemplate) {
+    config.prBodyTemplate = config.prBodyTemplate.replace('{{{table}}}', '');
+  }
 }
 
 export async function createVulnerabilities(

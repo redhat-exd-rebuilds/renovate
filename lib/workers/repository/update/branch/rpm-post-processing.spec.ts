@@ -1,7 +1,9 @@
 import { RedHatRPMLockfile } from '../../../../modules/manager/rpm-lockfile/schema';
 import { parseSingleYaml } from '../../../../util/yaml';
+import * as updatesTableModule from '../pr/body/updates-table';
 import {
   applyVulnerabilityPRNotes,
+  createUpdatesTable,
   createVulnerabilities,
   determineSeverityAutomerge,
   getUpgrade,
@@ -919,6 +921,357 @@ arches:
       expect(cfg.upgrades[0].prBodyNotes).toEqual(['note', 'note']);
       // Verify determineSeverityAutomerge was called and set vulnerabilitySeverity
       expect(cfg.upgrades[0].vulnerabilitySeverity).toBe('MEDIUM');
+    });
+  });
+
+  describe('createUpdatesTable()', () => {
+    let mockGetPrUpdatesTable: any;
+
+    beforeEach(() => {
+      // Spy on getPrUpdatesTable only for this test suite
+      mockGetPrUpdatesTable = vi.spyOn(updatesTableModule, 'getPrUpdatesTable');
+    });
+
+    afterEach(() => {
+      // Restore the original function after each test
+      vi.restoreAllMocks();
+    });
+
+    it('should return early when packages array is empty', () => {
+      const config: any = {
+        branchName: 'test-branch',
+        manager: 'rpm',
+      };
+      const upgrade: any = {
+        packageFile: 'package.spec',
+      };
+      const packages: any[] = [];
+
+      createUpdatesTable(config, upgrade, packages);
+
+      expect(mockGetPrUpdatesTable).not.toHaveBeenCalled();
+      expect(config.prHeader).toBeUndefined();
+    });
+
+    it('should return early when no packages have version changes', () => {
+      const config: any = {
+        branchName: 'test-branch',
+        manager: 'rpm',
+      };
+      const upgrade: any = {
+        packageFile: 'package.spec',
+      };
+      const packages = [
+        {
+          depName: 'pkg1',
+          currentVersion: '1.0.0',
+          newVersion: '1.0.0', // same version
+        },
+        {
+          depName: 'pkg2',
+          currentVersion: undefined, // no current version
+          newVersion: '2.0.0',
+        },
+        {
+          depName: 'pkg3',
+          currentVersion: '3.0.0',
+          newVersion: undefined, // no new version
+        },
+      ];
+
+      createUpdatesTable(config, upgrade, packages);
+
+      expect(mockGetPrUpdatesTable).not.toHaveBeenCalled();
+      expect(config.prHeader).toBeUndefined();
+    });
+
+    it('should create updates table with basic functionality', () => {
+      const config: any = {
+        branchName: 'test-branch',
+        manager: 'rpm',
+      };
+      const upgrade: any = {
+        packageFile: 'package.spec',
+      };
+      const packages = [
+        {
+          depName: 'pkg1',
+          currentVersion: '1.0.0',
+          newVersion: '1.1.0',
+        },
+        {
+          depName: 'pkg2',
+          currentVersion: '2.0.0',
+          newVersion: '2.1.0',
+        },
+      ];
+
+      mockGetPrUpdatesTable.mockReturnValue(
+        '\n\nThis PR contains the following updates:\n\n| Package | Change |\n|---|---|\n| pkg1 | `1.0.0` -> `1.1.0` |\n| pkg2 | `2.0.0` -> `2.1.0` |\n\n',
+      );
+
+      createUpdatesTable(config, upgrade, packages);
+
+      expect(mockGetPrUpdatesTable).toHaveBeenCalledWith({
+        manager: 'rpm',
+        branchName: 'test-branch',
+        baseBranch: undefined,
+        prBodyColumns: ['Package', 'Change'],
+        upgrades: [
+          {
+            manager: 'rpm-lockfile',
+            branchName: 'test-branch',
+            depName: 'pkg1',
+            depNameLinked: 'pkg1',
+            displayFrom: '1.0.0',
+            displayTo: '1.1.0',
+            prBodyDefinitions: {
+              Package: '{{{depNameLinked}}}',
+              Change: '`{{{displayFrom}}}` -> `{{{displayTo}}}`',
+            },
+          },
+          {
+            manager: 'rpm-lockfile',
+            branchName: 'test-branch',
+            depName: 'pkg2',
+            depNameLinked: 'pkg2',
+            displayFrom: '2.0.0',
+            displayTo: '2.1.0',
+            prBodyDefinitions: {
+              Package: '{{{depNameLinked}}}',
+              Change: '`{{{displayFrom}}}` -> `{{{displayTo}}}`',
+            },
+          },
+        ],
+      });
+
+      expect(config.prHeader).toBe(
+        'This PR contains the following updates:\n\nFile package.spec:\n\n| Package | Change |\n|---|---|\n| pkg1 | `1.0.0` -> `1.1.0` |\n| pkg2 | `2.0.0` -> `2.1.0` |\n\n',
+      );
+    });
+
+    it('should append to existing prHeader', () => {
+      const config: any = {
+        branchName: 'test-branch',
+        manager: 'rpm',
+        prHeader: 'Existing header content',
+      };
+      const upgrade: any = {
+        packageFile: 'package.spec',
+      };
+      const packages = [
+        {
+          depName: 'pkg1',
+          currentVersion: '1.0.0',
+          newVersion: '1.1.0',
+        },
+      ];
+
+      mockGetPrUpdatesTable.mockReturnValue(
+        '\n\nThis PR contains the following updates:\n\n| Package | Change |\n|---|---|\n| pkg1 | `1.0.0` -> `1.1.0` |\n\n',
+      );
+
+      createUpdatesTable(config, upgrade, packages);
+
+      expect(config.prHeader).toBe(
+        'This PR contains the following updates:\n\nFile package.spec:\n\n| Package | Change |\n|---|---|\n| pkg1 | `1.0.0` -> `1.1.0` |\n\n',
+      );
+    });
+
+    it('should remove duplicate "This PR contains" text from existing prHeader', () => {
+      const config: any = {
+        branchName: 'test-branch',
+        manager: 'rpm',
+        prHeader:
+          'Some content\n\nThis PR contains the following updates:\n\nExisting table here',
+      };
+      const upgrade: any = {
+        packageFile: 'package.spec',
+      };
+      const packages = [
+        {
+          depName: 'pkg1',
+          currentVersion: '1.0.0',
+          newVersion: '1.1.0',
+        },
+      ];
+
+      mockGetPrUpdatesTable.mockReturnValue(
+        '\n\nThis PR contains the following updates:\n\n| Package | Change |\n|---|---|\n| pkg1 | `1.0.0` -> `1.1.0` |\n\n',
+      );
+
+      createUpdatesTable(config, upgrade, packages);
+
+      // The duplicate "This PR contains..." text should be removed from the table markdown
+      expect(config.prHeader).toBe(
+        'Some content\n\nThis PR contains the following updates:\n\nExisting table here\n\nFile package.spec:\n\n| Package | Change |\n|---|---|\n| pkg1 | `1.0.0` -> `1.1.0` |\n\n',
+      );
+    });
+
+    it('should clean up prBodyTemplate by removing {{{table}}} placeholder', () => {
+      const config: any = {
+        branchName: 'test-branch',
+        manager: 'rpm',
+        prBodyTemplate:
+          'Some content before\n\n{{{table}}}\n\nSome content after',
+      };
+      const upgrade: any = {
+        packageFile: 'package.spec',
+      };
+      const packages = [
+        {
+          depName: 'pkg1',
+          currentVersion: '1.0.0',
+          newVersion: '1.1.0',
+        },
+      ];
+
+      mockGetPrUpdatesTable.mockReturnValue(
+        '\n\nThis PR contains the following updates:\n\n| Package | Change |\n|---|---|\n| pkg1 | `1.0.0` -> `1.1.0` |\n\n',
+      );
+
+      createUpdatesTable(config, upgrade, packages);
+
+      expect(config.prBodyTemplate).toBe(
+        'Some content before\n\n\n\nSome content after',
+      );
+    });
+
+    it('should not modify prBodyTemplate if {{{table}}} is not present', () => {
+      const config: any = {
+        branchName: 'test-branch',
+        manager: 'rpm',
+        prBodyTemplate: 'Some content without table placeholder',
+      };
+      const upgrade: any = {
+        packageFile: 'package.spec',
+      };
+      const packages = [
+        {
+          depName: 'pkg1',
+          currentVersion: '1.0.0',
+          newVersion: '1.1.0',
+        },
+      ];
+
+      mockGetPrUpdatesTable.mockReturnValue(
+        '\n\nThis PR contains the following updates:\n\n| Package | Change |\n|---|---|\n| pkg1 | `1.0.0` -> `1.1.0` |\n\n',
+      );
+
+      createUpdatesTable(config, upgrade, packages);
+
+      expect(config.prBodyTemplate).toBe(
+        'Some content without table placeholder',
+      );
+    });
+
+    it('should handle packages with mixed version presence correctly', () => {
+      const config: any = {
+        branchName: 'test-branch',
+        manager: 'rpm',
+      };
+      const upgrade: any = {
+        packageFile: 'package.spec',
+      };
+      const packages = [
+        {
+          depName: 'pkg1',
+          currentVersion: '1.0.0',
+          newVersion: '1.1.0',
+        },
+        {
+          depName: 'pkg2',
+          currentVersion: '2.0.0',
+          // no newVersion - should be filtered out
+        },
+        {
+          depName: 'pkg3',
+          // no currentVersion - should be filtered out
+          newVersion: '3.1.0',
+        },
+        {
+          depName: 'pkg4',
+          currentVersion: '4.0.0',
+          newVersion: '4.0.0', // same version - should be filtered out
+        },
+        {
+          depName: 'pkg5',
+          currentVersion: '5.0.0',
+          newVersion: '5.1.0',
+        },
+      ];
+
+      mockGetPrUpdatesTable.mockReturnValue(
+        '\n\nThis PR contains the following updates:\n\n| Package | Change |\n|---|---|\n| pkg1 | `1.0.0` -> `1.1.0` |\n| pkg5 | `5.0.0` -> `5.1.0` |\n\n',
+      );
+
+      createUpdatesTable(config, upgrade, packages);
+
+      expect(mockGetPrUpdatesTable).toHaveBeenCalledWith({
+        manager: 'rpm',
+        branchName: 'test-branch',
+        baseBranch: undefined,
+        prBodyColumns: ['Package', 'Change'],
+        upgrades: [
+          {
+            manager: 'rpm-lockfile',
+            branchName: 'test-branch',
+            depName: 'pkg1',
+            depNameLinked: 'pkg1',
+            displayFrom: '1.0.0',
+            displayTo: '1.1.0',
+            prBodyDefinitions: {
+              Package: '{{{depNameLinked}}}',
+              Change: '`{{{displayFrom}}}` -> `{{{displayTo}}}`',
+            },
+          },
+          {
+            manager: 'rpm-lockfile',
+            branchName: 'test-branch',
+            depName: 'pkg5',
+            depNameLinked: 'pkg5',
+            displayFrom: '5.0.0',
+            displayTo: '5.1.0',
+            prBodyDefinitions: {
+              Package: '{{{depNameLinked}}}',
+              Change: '`{{{displayFrom}}}` -> `{{{displayTo}}}`',
+            },
+          },
+        ],
+      });
+    });
+
+    it('should copy config properties to dummy branch config', () => {
+      const config: any = {
+        branchName: 'test-branch',
+        manager: 'rpm',
+        baseBranch: 'main',
+      };
+      const upgrade: any = {
+        packageFile: 'package.spec',
+      };
+      const packages = [
+        {
+          depName: 'pkg1',
+          currentVersion: '1.0.0',
+          newVersion: '1.1.0',
+        },
+      ];
+
+      mockGetPrUpdatesTable.mockReturnValue(
+        '\n\nThis PR contains the following updates:\n\n| Package | Change |\n|---|---|\n| pkg1 | `1.0.0` -> `1.1.0` |\n\n',
+      );
+
+      createUpdatesTable(config, upgrade, packages);
+
+      expect(mockGetPrUpdatesTable).toHaveBeenCalledWith(
+        expect.objectContaining({
+          manager: 'rpm',
+          branchName: 'test-branch',
+          baseBranch: 'main',
+          prBodyColumns: ['Package', 'Change'],
+        }),
+      );
     });
   });
 });
