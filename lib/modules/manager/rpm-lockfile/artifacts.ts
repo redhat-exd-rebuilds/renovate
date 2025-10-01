@@ -48,7 +48,14 @@ export async function updateArtifacts({
     // and lockFileName already contain the (optional) subfolder.
     // Setting cwdFile would descend into that subfolder and
     // we'd have it set twice.
-    const execOptions: ExecOptions = {};
+    const execOptions: ExecOptions = {
+      extraEnv: {
+        DNF_VAR_SSL_CLIENT_KEY: process.env.DNF_VAR_SSL_CLIENT_KEY,
+        DNF_VAR_SSL_CLIENT_CERT: process.env.DNF_VAR_SSL_CLIENT_CERT,
+        DNF_VAR_SSL_AUTH_CLIENT_KEY: process.env.DNF_VAR_SSL_AUTH_CLIENT_KEY,
+        DNF_VAR_SSL_AUTH_CLIENT_CERT: process.env.DNF_VAR_SSL_AUTH_CLIENT_CERT,
+      },
+    };
 
     await exec(cmd, execOptions);
 
