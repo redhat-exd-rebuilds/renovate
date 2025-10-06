@@ -2383,6 +2383,13 @@ const options: Readonly<RenovateOptions>[] = [
     allowedValues: ['ALL', 'MEDIUM', 'HIGH', 'CRITICAL'],
   },
   {
+    name: 'parallelRunPruneStaleBranches',
+    description:
+      'Set to `true` to enable an alternative approach to pruning stale branches. In this approach, Renovate will only prune stale branches belonging to the one base branch it is renovating. pruneStaleBranches must be enabled for this to have any effect.',
+    type: 'boolean',
+    default: false,
+  },
+  {
     name: 'pruneBranchAfterAutomerge',
     description: 'Set to `true` to enable branch pruning after automerging.',
     type: 'boolean',
