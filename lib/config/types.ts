@@ -458,6 +458,7 @@ export interface RenovateConfig
   containerVulnerabilityAlerts?: boolean;
   rpmVulnerabilityAlerts?: boolean;
   rpmVulnerabilityAutomerge?: RPMVulnerabilityAutomerge;
+  parallelRunPruneStaleBranches?: boolean;
   vulnerabilitySeverity?: string;
   customManagers?: CustomManager[];
   customDatasources?: Record<string, CustomDatasourceConfig>;

@@ -171,6 +171,27 @@ export async function pruneStaleBranches(
     logger.debug('No renovate branches found');
     return;
   }
+
+  if (config.parallelRunPruneStaleBranches) {
+    logger.debug('Filtering stale branches to only belong to the base branch');
+    const baseBranch = branchList?.[0]?.split('/')[2] ?? null;
+    if (typeof baseBranch === 'string') {
+      renovateBranches = renovateBranches.filter((branchName) => {
+        try {
+          const parts = branchName.split('/');
+          if (parts.length >= 3) {
+            const branchBaseName = parts[2];
+            return branchBaseName === baseBranch;
+          }
+          return true;
+        } catch {
+          // If unable to parse, keep it
+          return true;
+        }
+      });
+    }
+  }
+
   logger.debug(
     {
       branchList: branchList?.sort(),
