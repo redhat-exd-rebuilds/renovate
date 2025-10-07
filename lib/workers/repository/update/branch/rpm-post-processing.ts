@@ -33,11 +33,9 @@ export async function postProcessRPMs(
     return null;
   }
 
-  // Create and add updates table to PR header
-  createUpdatesTable(config, upgrade, packages);
-
   // skipping the rest of the logic if it's not a vulnerability alert
   if (!config.isVulnerabilityAlert) {
+    createUpdatesTable(config, upgrade, packages);
     return result;
   }
 
@@ -52,6 +50,8 @@ export async function postProcessRPMs(
     logger.debug('No RPM vulnerabilities found');
     return null;
   }
+
+  createUpdatesTable(config, upgrade, packages);
 
   applyVulnerabilityPRNotes(
     vulnerabilities,
