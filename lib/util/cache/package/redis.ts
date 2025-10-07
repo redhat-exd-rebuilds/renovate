@@ -4,7 +4,6 @@ import { createClient, createCluster } from 'redis';
 import { logger } from '../../../logger';
 import { compressToBase64, decompressFromBase64 } from '../../compress';
 import { regEx } from '../../regex';
-import { resolveTtlValues } from './ttl';
 import type { PackageCacheNamespace } from './types';
 
 let client:

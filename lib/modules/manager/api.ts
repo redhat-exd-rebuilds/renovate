@@ -86,6 +86,7 @@ import * as preCommit from './pre-commit';
 import * as pub from './pub';
 import * as puppet from './puppet';
 import * as pyenv from './pyenv';
+import * as quadlet from './quadlet';
 import * as renovateConfigPresets from './renovate-config-presets';
 import * as rpmLockfile from './rpm-lockfile';
 import * as rubyVersion from './ruby-version';
