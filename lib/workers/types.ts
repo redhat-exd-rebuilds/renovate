@@ -53,6 +53,7 @@ export interface BranchUpgradeConfig
   group?: GroupConfig;
   groupName?: string;
   groupSlug?: string;
+  dependencyDashboardCategory?: string;
   manager: string;
   packageFile?: string;
   lockFile?: string;
@@ -145,6 +146,7 @@ export interface BranchConfig
   isConflicted?: boolean;
   commitFingerprint?: string;
   cacheFingerprintMatch?: CacheFingerprintMatchResult;
+  prNotPendingHours?: number;
 }
 
 export interface BranchMetadata {
