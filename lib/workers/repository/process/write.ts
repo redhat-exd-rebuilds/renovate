@@ -1,4 +1,4 @@
-import is from '@sindresorhus/is';
+import { isString } from '@sindresorhus/is';
 import type { RenovateConfig } from '../../../config/types';
 import { addMeta, logger, removeMeta } from '../../../logger';
 import { hashMap } from '../../../modules/manager';
@@ -154,7 +154,7 @@ export async function writeUpdates(
       ...new Set(
         branch.upgrades
           .map((upgrade) => hashMap.get(upgrade.manager) ?? upgrade.manager)
-          .filter(is.string),
+          .filter(isString),
       ),
     ].sort();
     const commitFingerprint = fingerprint({
