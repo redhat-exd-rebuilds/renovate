@@ -21,6 +21,7 @@ export async function finalizeRepo(
   await repositoryCache.saveCache();
   await repositoryCache.cleanup();
   await pruneStaleBranches(config, branchList);
+  await repositoryCache.saveCache();
   await ensureIssuesClosing();
   await clearRenovateRefs();
   PackageFiles.clear();

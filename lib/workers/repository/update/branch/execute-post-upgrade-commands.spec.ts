@@ -190,7 +190,7 @@ describe('workers/repository/update/branch/execute-post-upgrade-commands', () =>
 
       expect(res.updatedArtifacts).toHaveLength(0);
       expect(fs.outputCacheFile).toHaveBeenCalledTimes(1);
-      expect(fs.outputCacheFile).toHaveBeenCalledWith(
+      expect(fs.outputCacheFile).toHaveBeenCalledExactlyOnceWith(
         expect.stringMatching(
           `^.*${upath.sep}post-upgrade-data-file-[a-f0-9]{16}.tmp$`,
         ),
@@ -296,10 +296,59 @@ describe('workers/repository/update/branch/execute-post-upgrade-commands', () =>
 
       expect(res.updatedArtifacts).toHaveLength(0);
       expect(fs.writeLocalFile).toHaveBeenCalledTimes(1);
+
       expect(logger.logger.debug).toHaveBeenCalledWith(
         { file: 'not-a-txt-file' },
         'Post-upgrade file did not match any file filters',
       );
+    });
+
+    it('excludes .npmrc files when npmrc config is present', async () => {
+      const commands = partial<BranchUpgradeConfig>([
+        {
+          manager: 'npm',
+          branchName: 'main',
+          postUpgradeTasks: {
+            executionMode: 'update',
+            commands: ['echo test'],
+            fileFilters: ['**/*'],
+          },
+        },
+      ]);
+      const config: BranchConfig = {
+        manager: 'npm',
+        updatedPackageFiles: [
+          { type: 'addition', path: 'package.json', contents: '{}' },
+        ],
+        npmrc: 'registry=https://example.com',
+        upgrades: [],
+        branchName: 'main',
+        baseBranch: 'base',
+      };
+
+      git.getRepoStatus.mockResolvedValueOnce(
+        partial<StatusResult>({
+          modified: [],
+          not_added: ['.npmrc', 'other-file.txt'],
+          deleted: [],
+        }),
+      );
+
+      const localDir = upath.join(tmpDir.path, 'local');
+      GlobalConfig.set({ localDir, allowedCommands: ['echo test'] });
+
+      fs.localPathIsFile.mockResolvedValue(true);
+      fs.localPathExists.mockResolvedValue(true);
+      fs.readLocalFile.mockResolvedValueOnce('some content');
+
+      const res = await postUpgradeCommands.postUpgradeCommandsExecutor(
+        commands,
+        config,
+      );
+
+      expect(res.updatedArtifacts).toHaveLength(1);
+      expect(res.updatedArtifacts[0].path).toBe('other-file.txt');
+      expect(res.updatedArtifacts[0].type).toBe('addition');
     });
 
     it('handles previously-deleted files which are re-added', async () => {
@@ -581,11 +630,93 @@ describe('workers/repository/update/branch/execute-post-upgrade-commands', () =>
         config,
       );
 
-      expect(exec.exec).toHaveBeenCalledWith('some-command', {
+      expect(exec.exec).toHaveBeenCalledExactlyOnceWith('some-command', {
         cwd: localDir,
         extraEnv: gitEnvVars,
       });
       expect(res.artifactErrors).toHaveLength(0);
+    });
+
+    it('uses workingDirTemplate when provided', async () => {
+      const commands = partial<BranchUpgradeConfig>([
+        {
+          manager: 'npm',
+          branchName: 'renovate/jest-29.x',
+          depName: 'jest',
+          newVersion: '29.5.0',
+          postUpgradeTasks: {
+            commands: ['some-command'],
+            workingDirTemplate:
+              'projects/{{manager}}/{{depName}}-{{newVersion}}',
+            executionMode: 'update',
+          },
+        },
+      ]);
+      const config: BranchConfig = {
+        manager: 'npm',
+        updatedPackageFiles: [],
+        updatedArtifacts: [],
+        upgrades: [],
+        branchName: 'renovate/jest-29.x',
+        baseBranch: 'main',
+      };
+      git.getRepoStatus.mockResolvedValueOnce(
+        partial<StatusResult>({
+          modified: [],
+          not_added: [],
+          deleted: [],
+        }),
+      );
+      GlobalConfig.set({
+        localDir: '/default/dir',
+        allowedCommands: ['some-command'],
+      });
+      exec.exec.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await postUpgradeCommands.postUpgradeCommandsExecutor(commands, config);
+
+      expect(exec.exec).toHaveBeenCalledExactlyOnceWith('some-command', {
+        cwd: 'projects/npm/jest-29.5.0',
+      });
+    });
+
+    it('uses localDir when workingDirTemplate is not provided', async () => {
+      const commands = partial<BranchUpgradeConfig>([
+        {
+          manager: 'some-manager',
+          branchName: 'main',
+          postUpgradeTasks: {
+            commands: ['some-command'],
+            executionMode: 'update',
+          },
+        },
+      ]);
+      const config: BranchConfig = {
+        manager: 'some-manager',
+        updatedPackageFiles: [],
+        updatedArtifacts: [],
+        upgrades: [],
+        branchName: 'main',
+        baseBranch: 'base',
+      };
+      git.getRepoStatus.mockResolvedValueOnce(
+        partial<StatusResult>({
+          modified: [],
+          not_added: [],
+          deleted: [],
+        }),
+      );
+      GlobalConfig.set({
+        localDir: '/default/dir',
+        allowedCommands: ['some-command'],
+      });
+      exec.exec = vi.fn().mockResolvedValue({ stdout: '', stderr: '' });
+
+      await postUpgradeCommands.postUpgradeCommandsExecutor(commands, config);
+
+      expect(exec.exec).toHaveBeenCalledExactlyOnceWith('some-command', {
+        cwd: '/default/dir',
+      });
     });
   });
 });
