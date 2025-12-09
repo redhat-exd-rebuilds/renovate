@@ -1,9 +1,9 @@
 import { DateTime } from 'luxon';
+import type { RedisClusterOptions } from 'redis';
 import { createClient, createCluster } from 'redis';
 import { logger } from '../../../logger';
 import { compressToBase64, decompressFromBase64 } from '../../compress';
 import { regEx } from '../../regex';
-import { resolveTtlValues } from './ttl';
 import type { PackageCacheNamespace } from './types';
 
 let client:
@@ -71,21 +71,15 @@ export async function set(
   namespace: PackageCacheNamespace,
   key: string,
   value: unknown,
-  ttlMinutes = 5,
+  hardTtlMinutes = 5,
 ): Promise<void> {
-  const ttlValues = resolveTtlValues(namespace, ttlMinutes);
-  const effectiveTtlMinutes = Math.max(
-    ttlMinutes,
-    ttlValues.softTtlMinutes ?? 0,
-  );
-
   logger.trace(
-    { rprefix, namespace, key, effectiveTtlMinutes },
+    { rprefix, namespace, key, hardTtlMinutes },
     'Saving cached value',
   );
 
   // Redis requires TTL to be integer, not float
-  const redisTTL = Math.floor(effectiveTtlMinutes * 60);
+  const redisTTL = Math.floor(hardTtlMinutes * 60);
 
   try {
     await client?.set(
@@ -93,7 +87,7 @@ export async function set(
       JSON.stringify({
         compress: true,
         value: await compressToBase64(JSON.stringify(value)),
-        expiry: DateTime.local().plus({ minutes: effectiveTtlMinutes }),
+        expiry: DateTime.local().plus({ minutes: hardTtlMinutes }),
       }),
       { EX: redisTTL },
     );
@@ -127,9 +121,22 @@ export async function init(
     pingInterval: 30000, // 30s
   };
   if (clusteredMode) {
-    client = createCluster({
-      rootNodes: [config],
-    });
+    const clusterConfig: RedisClusterOptions = { rootNodes: [config] };
+
+    // only add defaults if username or password are present in the URL
+    const parsedUrl = new URL(rewrittenUrl);
+    if (parsedUrl.username) {
+      clusterConfig.defaults = {
+        username: parsedUrl.username,
+      };
+    }
+
+    if (parsedUrl.password) {
+      clusterConfig.defaults ??= {};
+      clusterConfig.defaults.password = parsedUrl.password;
+    }
+
+    client = createCluster(clusterConfig);
   } else {
     client = createClient(config);
   }

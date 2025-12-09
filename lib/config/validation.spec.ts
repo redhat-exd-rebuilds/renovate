@@ -1,4 +1,4 @@
-import { configFileNames } from './app-strings';
+import { getConfigFileNames } from './app-strings';
 import { GlobalConfig } from './global';
 import type { RenovateConfig } from './types';
 import * as configValidation from './validation';
@@ -36,15 +36,19 @@ describe('config/validation', () => {
       const config = {
         binarySource: 'something',
         username: 'user',
+        ignorePrAuthor: true,
       };
       const { warnings } = await configValidation.validateConfig(
         'repo',
         config,
       );
-      expect(warnings).toHaveLength(2);
+      expect(warnings).toHaveLength(3);
       expect(warnings).toMatchObject([
         {
           message: `The "binarySource" option is a global option reserved only for Renovate's global configuration and cannot be configured within a repository's config file.`,
+        },
+        {
+          message: `The "ignorePrAuthor" option is a global option reserved only for Renovate's global configuration and cannot be configured within a repository's config file.`,
         },
         {
           message: `The "username" option is a global option reserved only for Renovate's global configuration and cannot be configured within a repository's config file.`,
@@ -1209,6 +1213,58 @@ describe('config/validation', () => {
       expect(warnings).toHaveLength(1);
     });
 
+    it('does not error on use of `global:` presets in `globalExtends`', async () => {
+      const config = {
+        globalExtends: ['global:safeEnv'],
+      };
+      const { warnings, errors } = await configValidation.validateConfig(
+        'global',
+        config,
+        true,
+      );
+      expect(errors).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
+    });
+
+    it('does not error on use of `global:` presets in global `extends`', async () => {
+      const config = {
+        extends: ['global:safeEnv'],
+      };
+      const { warnings, errors } = await configValidation.validateConfig(
+        'global',
+        config,
+        true,
+      );
+      expect(errors).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
+    });
+
+    it('errors on use of `global:` presets in inherit `extends`', async () => {
+      const config = {
+        extends: ['global:safeEnv'],
+      };
+      const { warnings, errors } = await configValidation.validateConfig(
+        'inherit',
+        config,
+        true,
+      );
+      expect(errors).toHaveLength(1);
+      expect(warnings).toHaveLength(0);
+    });
+
+    it('errors on use of `global:` presets in repo `extends`', async () => {
+      const config = {
+        extends: ['global:safeEnv'],
+      };
+      const { warnings, errors } = await configValidation.validateConfig(
+        'repo',
+        config,
+        true,
+      );
+      expect(errors).toHaveLength(1);
+      expect(warnings).toHaveLength(0);
+    });
+
     // adding this test explicitly because we used to validate the customEnvVariables inside repo config previously
     it('warns if customEnvVariables are found in repo config', async () => {
       const config = {
@@ -1600,6 +1656,21 @@ describe('config/validation', () => {
       ]);
     });
 
+    it('validates env against the allowedEnv regex', async () => {
+      const config = {
+        env: {
+          SOME_VAR: 'SOME_VALUE',
+        },
+        allowedEnv: ['/^SOME.*/'],
+      };
+      const { warnings, errors } = await configValidation.validateConfig(
+        'global',
+        config,
+      );
+      expect(warnings).toHaveLength(0);
+      expect(errors).toHaveLength(0);
+    });
+
     it('validates options with different type but defaultValue=null', async () => {
       const config = {
         minimumReleaseAge: null,
@@ -1747,7 +1818,7 @@ describe('config/validation', () => {
         );
         expect(warnings).toEqual([
           {
-            message: `Invalid value \`invalid\` for \`onboardingConfigFileName\`. The allowed values are ${configFileNames.join(', ')}.`,
+            message: `Invalid value \`invalid\` for \`onboardingConfigFileName\`. The allowed values are ${getConfigFileNames().join(', ')}.`,
             topic: 'Configuration Error',
           },
         ]);
@@ -2132,7 +2203,7 @@ describe('config/validation', () => {
       expect(errors).toHaveLength(2);
     });
 
-    it('allow bumpVersion ', async () => {
+    it('allow bumpVersion', async () => {
       const config = partial<RenovateConfig>({
         bumpVersion: {
           filePatterns: ['foo'],

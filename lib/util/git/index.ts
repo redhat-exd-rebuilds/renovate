@@ -1,12 +1,12 @@
 import URL from 'node:url';
 import { setTimeout } from 'timers/promises';
-import is from '@sindresorhus/is';
+import { isBoolean, isNonEmptyObject, isString } from '@sindresorhus/is';
 import fs from 'fs-extra';
 import semver from 'semver';
 import type { Options, SimpleGit, TaskOptions } from 'simple-git';
 import { ResetMode, simpleGit } from 'simple-git';
 import upath from 'upath';
-import { configFileNames } from '../../config/app-strings';
+import { getConfigFileNames } from '../../config/app-strings';
 import { GlobalConfig } from '../../config/global';
 import type { RenovateConfig } from '../../config/types';
 import {
@@ -25,8 +25,10 @@ import type { GitProtocol } from '../../types/git';
 import { incLimitedValue } from '../../workers/global/limits';
 import { getCache } from '../cache/repository';
 import { getEnv } from '../env';
+import { getChildEnv } from '../exec/utils';
 import { newlineRegex, regEx } from '../regex';
 import { matchRegexOrGlobList } from '../string-match';
+import { getGitEnvironmentVariables } from './auth';
 import { parseGitAuthor } from './author';
 import {
   getCachedBehindBaseResult,
@@ -125,7 +127,7 @@ async function getDefaultBranch(git: SimpleGit): Promise<string> {
   // see https://stackoverflow.com/a/62352647/3005034
   try {
     let res = await git.raw(['rev-parse', '--abbrev-ref', 'origin/HEAD']);
-    /* v8 ignore start -- TODO: add test */
+    /* v8 ignore next -- TODO: add test */
     if (!res) {
       logger.debug('Could not determine default branch using git rev-parse');
       const headPrefix = 'HEAD branch: ';
@@ -135,9 +137,9 @@ async function getDefaultBranch(git: SimpleGit): Promise<string> {
         .find((line) => line.startsWith(headPrefix))!
         .replace(headPrefix, '');
     }
-    /* v8 ignore stop */
+
     return res.replace('origin/', '').trim();
-    /* v8 ignore start -- TODO: add test */
+    /* v8 ignore next -- TODO: add test */
   } catch (err) {
     logger.debug({ err }, 'Error getting default branch');
     const errChecked = checkForPlatformFailure(err);
@@ -157,7 +159,6 @@ async function getDefaultBranch(git: SimpleGit): Promise<string> {
     }
     throw err;
   }
-  /* v8 ignore stop */
 }
 
 let config: LocalConfig = {} as any;
@@ -368,6 +369,7 @@ export async function cloneSubmodules(
     return;
   }
   submodulesInitizialized = true;
+  const gitEnv = getChildEnv({ env: getGitEnvironmentVariables() });
   await syncGit();
   const submodules = await getSubmodules();
   for (const submodule of submodules) {
@@ -381,7 +383,7 @@ export async function cloneSubmodules(
     try {
       logger.debug(`Cloning git submodule at ${submodule}`);
       await gitRetry(() =>
-        git.submoduleUpdate(['--init', '--recursive', submodule]),
+        git.env(gitEnv).submoduleUpdate(['--init', '--recursive', submodule]),
       );
     } catch (err) {
       logger.warn({ err, submodule }, `Unable to initialise git submodule`);
@@ -426,7 +428,7 @@ export async function syncGit(): Promise<void> {
       const durationMs = Math.round(Date.now() - fetchStart);
       logger.info({ durationMs }, 'git fetch completed');
       clone = false;
-      /* v8 ignore next 6 -- TODO: add test */
+      /* v8 ignore next -- TODO: add test */
     } catch (err) {
       if (err.message === REPOSITORY_EMPTY) {
         throw err;
@@ -476,7 +478,7 @@ export async function syncGit(): Promise<void> {
     config.currentBranchSha = (
       await git.raw(['rev-parse', 'HEAD'])
     ).trim() as LongCommitSha;
-    /* v8 ignore next 6 -- TODO: add test */
+    /* v8 ignore next -- TODO: add test */
   } catch (err) {
     if (err.message?.includes('fatal: not a git repository')) {
       throw new Error(REPOSITORY_CHANGED);
@@ -488,7 +490,7 @@ export async function syncGit(): Promise<void> {
   try {
     const latestCommit = (await git.log({ n: 1 })).latest;
     logger.debug({ latestCommit }, 'latest repository commit');
-    /* v8 ignore next 10 -- TODO: add test */
+    /* v8 ignore next -- TODO: add test */
   } catch (err) {
     const errChecked = checkForPlatformFailure(err);
     if (errChecked) {
@@ -529,7 +531,7 @@ export async function syncGit(): Promise<void> {
 }
 
 export async function getRepoStatus(path?: string): Promise<StatusResult> {
-  if (is.string(path)) {
+  if (isString(path)) {
     const localDir = GlobalConfig.get('localDir');
     const localPath = upath.resolve(localDir, path);
     if (!localPath.startsWith(upath.resolve(localDir))) {
@@ -691,7 +693,7 @@ export async function getFileList(): Promise<string[]> {
   // submodules are starting with `160000 commit`
   return files
     .split(newlineRegex)
-    .filter(is.string)
+    .filter(isString)
     .filter((line) => line.startsWith('100'))
     .map((line) => line.split(regEx(/\t/)).pop()!);
 }
@@ -859,7 +861,7 @@ export async function isBranchConflicted(
     baseBranch,
     baseBranchSha,
   );
-  if (is.boolean(isConflicted)) {
+  if (isBoolean(isConflicted)) {
     logger.debug(
       `branch.isConflicted(): using cached result "${isConflicted}"`,
     );
@@ -882,7 +884,7 @@ export async function isBranchConflicted(
     await git.merge(['--no-commit', '--no-ff', `origin/${branch}`]);
   } catch (err) {
     result = true;
-    /* v8 ignore next 6 -- TODO: add test */
+    /* v8 ignore next -- TODO: add test */
     if (!err?.git?.conflicts?.length) {
       logger.debug(
         { baseBranch, branch, err },
@@ -895,7 +897,7 @@ export async function isBranchConflicted(
       if (origBranch !== baseBranch) {
         await git.checkout(origBranch);
       }
-      /* v8 ignore next 6 -- TODO: add test */
+      /* v8 ignore next -- TODO: add test */
     } catch (err) {
       logger.debug(
         { baseBranch, branch, err },
@@ -1186,7 +1188,7 @@ export async function prepareCommit({
         try {
           /* v8 ignore next 2 -- TODO: add test */
           const addParams =
-            fileName === configFileNames[0] ? ['-f', fileName] : fileName;
+            fileName === getConfigFileNames()[0] ? ['-f', fileName] : fileName;
           await git.add(addParams);
           if (file.isExecutable) {
             await git.raw(['update-index', '--chmod=+x', fileName]);
@@ -1214,7 +1216,7 @@ export async function prepareCommit({
 
     const commitRes = await git.commit(message, [], commitOptions);
     if (
-      commitRes.summary &&
+      isNonEmptyObject(commitRes.summary) &&
       commitRes.summary.changes === 0 &&
       commitRes.summary.insertions === 0 &&
       commitRes.summary.deletions === 0
@@ -1327,7 +1329,7 @@ export async function commitFiles(
       }
     }
     return null;
-    /* v8 ignore next 6 -- TODO: add test */
+    /* v8 ignore next -- TODO: add test */
   } catch (err) {
     if (err.message.includes('[rejected] (stale info)')) {
       throw new Error(REPOSITORY_CHANGED);
@@ -1556,8 +1558,8 @@ export async function getRemotes(): Promise<string[]> {
     const remotes = await git.getRemotes();
     logger.debug(`Found remotes: ${remotes.map((r) => r.name).join(', ')}`);
     return remotes.map((remote) => remote.name);
-  } catch (err) /* v8 ignore start */ {
+  } catch (err) /* v8 ignore next */ {
     logger.error({ err }, 'Error getting remotes');
     throw err;
-  } /* v8 ignore stop */
+  }
 }
