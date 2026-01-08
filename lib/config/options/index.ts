@@ -2223,6 +2223,38 @@ const options: RenovateOptions[] = [
     experimentalIssues: [20542],
   },
   {
+    name: 'containerVulnerabilityAlerts',
+    description: 'Enable vulnerability alerts for containers.',
+    type: 'boolean',
+    default: false,
+    experimental: true,
+    experimentalIssues: [20542],
+  },
+  {
+    name: 'rpmVulnerabilityAlerts',
+    description: 'Enable vulnerability alerts for RPMs.',
+    type: 'boolean',
+    default: false,
+    experimental: true,
+    experimentalIssues: [20542],
+  },
+  {
+    name: 'rpmVulnerabilityAutomerge',
+    description:
+      'Set at what criticality level should RPM vulnerability PRs be automerged.',
+    type: 'string',
+    default: null,
+    experimental: true,
+    allowedValues: ['ALL', 'MEDIUM', 'HIGH', 'CRITICAL'],
+  },
+  {
+    name: 'parallelRunPruneStaleBranches',
+    description:
+      'Set to `true` to enable an alternative approach to pruning stale branches. In this approach, Renovate will only prune stale branches belonging to the one base branch it is renovating. pruneStaleBranches must be enabled for this to have any effect.',
+    type: 'boolean',
+    default: false,
+  },
+  {
     name: 'pruneBranchAfterAutomerge',
     description: 'Set to `true` to enable branch pruning after automerging.',
     type: 'boolean',

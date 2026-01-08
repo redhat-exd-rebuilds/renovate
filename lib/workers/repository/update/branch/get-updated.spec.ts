@@ -1,6 +1,7 @@
 import { isArray } from '@sindresorhus/is';
 import { mockDeep } from 'vitest-mock-extended';
 import { GitRefsDatasource } from '../../../../modules/datasource/git-refs';
+import * as managerModule from '../../../../modules/manager';
 import * as _batectWrapper from '../../../../modules/manager/batect-wrapper';
 import * as _bundler from '../../../../modules/manager/bundler';
 import * as _composer from '../../../../modules/manager/composer';
@@ -18,7 +19,8 @@ import type {
 } from '../../../../modules/manager/types';
 import type { BranchConfig, BranchUpgradeConfig } from '../../../types';
 import * as _autoReplace from './auto-replace';
-import { getUpdatedPackageFiles } from './get-updated';
+import { getUpdatedPackageFiles, managerUpdateArtifacts } from './get-updated';
+import * as rpmVulnPostProcessing from './rpm-post-processing';
 import { git } from '~test/util';
 
 const bundler = vi.mocked(_bundler);
@@ -1219,6 +1221,114 @@ describe('workers/repository/update/branch/get-updated', () => {
           expect.objectContaining({ packageFileName: 'requirements-dev.in' }),
         );
       });
+    });
+  });
+
+  describe('managerUpdateArtifacts', () => {
+    const updateArtifact = {
+      packageFileName: 'file',
+      updatedDeps: [],
+      newPackageFileContent: 'content',
+      config: {},
+    };
+    const config: any = {
+      isLockFileMaintenance: false,
+      isVulnerabilityAlert: false,
+    };
+    const manager = 'npm';
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('calls updateArtifacts and returns result', async () => {
+      const mockUpdateArtifacts = vi
+        .fn()
+        .mockResolvedValue([
+          { file: { path: 'file', contents: 'abc', type: 'addition' } },
+        ]);
+      vi.spyOn(managerModule, 'get').mockReturnValue(mockUpdateArtifacts);
+      const result = await managerUpdateArtifacts(
+        manager,
+        updateArtifact,
+        config,
+      );
+      expect(mockUpdateArtifacts).toHaveBeenCalledWith(updateArtifact);
+      expect(result).toEqual([
+        { file: { path: 'file', contents: 'abc', type: 'addition' } },
+      ]);
+    });
+
+    it('returns null if updateArtifacts is not defined', async () => {
+      vi.spyOn(managerModule, 'get').mockReturnValue(undefined);
+      const result = await managerUpdateArtifacts(
+        manager,
+        updateArtifact,
+        config,
+      );
+      expect(result).toBeNull();
+    });
+
+    it('calls postProcessRPMs for rpm-lockfile manager', async () => {
+      const rpmConfig = {
+        isLockFileMaintenance: true,
+        isVulnerabilityAlert: true,
+      };
+      const mockUpdateArtifacts = vi
+        .fn()
+        .mockResolvedValue([
+          { file: { path: 'file', contents: 'abc', type: 'addition' } },
+        ]);
+      const mockPostProcess = vi
+        .spyOn(rpmVulnPostProcessing, 'postProcessRPMs')
+        .mockResolvedValue([
+          { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
+        ]);
+      vi.spyOn(managerModule, 'get').mockReturnValue(mockUpdateArtifacts);
+      const result = await managerUpdateArtifacts(
+        'rpm-lockfile',
+        updateArtifact,
+        rpmConfig as any,
+      );
+      expect(mockUpdateArtifacts).toHaveBeenCalledWith(updateArtifact);
+      expect(mockPostProcess).toHaveBeenCalledWith(
+        [{ file: { path: 'file', contents: 'abc', type: 'addition' } }],
+        rpmConfig,
+      );
+      expect(result).toEqual([
+        { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
+      ]);
+    });
+
+    it('calls postProcessRPMs for rpm-lockfile manager even without vulnerability alert', async () => {
+      const rpmConfig = {
+        isLockFileMaintenance: true,
+        isVulnerabilityAlert: false,
+      };
+      const mockUpdateArtifacts = vi
+        .fn()
+        .mockResolvedValue([
+          { file: { path: 'file', contents: 'abc', type: 'addition' } },
+        ]);
+      const mockPostProcess = vi
+        .spyOn(rpmVulnPostProcessing, 'postProcessRPMs')
+        .mockResolvedValue([
+          { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
+        ]);
+      vi.spyOn(managerModule, 'get').mockReturnValue(mockUpdateArtifacts);
+      const result = await managerUpdateArtifacts(
+        'rpm-lockfile',
+        updateArtifact,
+        rpmConfig as any,
+      );
+      expect(mockUpdateArtifacts).toHaveBeenCalledWith(updateArtifact);
+      expect(mockPostProcess).toHaveBeenCalledWith(
+        [{ file: { path: 'file', contents: 'abc', type: 'addition' } }],
+        rpmConfig,
+      );
+      expect(result).toEqual([
+        { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
+      ]);
     });
   });
 });
