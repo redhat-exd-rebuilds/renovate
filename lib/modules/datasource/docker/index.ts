@@ -126,6 +126,19 @@ export class DockerDatasource extends Datasource {
         noAuth: true,
         cacheProvider: memCacheProvider,
       });
+
+      if (manifestResponse) {
+        logger.debug(
+          {
+            registryHost,
+            dockerRepository,
+            tag,
+            mode,
+            headers: manifestResponse.headers,
+          },
+          'Got manifest response from getManifestResponse() call.',
+        );
+      }
       return manifestResponse;
     } catch (err) /* istanbul ignore next */ {
       if (err instanceof ExternalHostError) {
@@ -919,6 +932,13 @@ export class DockerDatasource extends Datasource {
           digest =
             (manifestResponse.headers['docker-content-digest'] as string) ||
             null;
+
+          if (digest === null) {
+            logger.debug(
+              { registryHost, dockerRepository, newTag, packageName },
+              `No digest found in manifest response headers for package ${packageName} in getDigest() call.`,
+            );
+          }
         }
       }
 

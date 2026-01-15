@@ -682,10 +682,52 @@ export async function lookupUpdates(
           }
 
           // TODO #22198
-          update.newDigest ??=
-            dependency?.releases.find((r) => r.version === update.newValue)
-              ?.newDigest ??
-            (await getDigest(getDigestConfig, update.newValue))!;
+          update.newDigest ??= dependency?.releases.find(
+            (r) => r.version === update.newValue,
+          )?.newDigest;
+
+          if (update.newDigest === undefined || update.newDigest === null) {
+            logger.debug(
+              {
+                packageName: config.packageName,
+                currentValue: config.currentValue,
+                datasource: config.datasource,
+                newValue: update.newValue,
+                bucket: update.bucket,
+              },
+              'update.newDigest is undefined or null, releases did not have a digest, fetching digest from getDigest.',
+            );
+          }
+
+          update.newDigest ??= (await getDigest(
+            getDigestConfig,
+            update.newValue,
+          ))!;
+
+          if (update.newDigest === undefined || update.newDigest === null) {
+            logger.debug(
+              {
+                packageName: config.packageName,
+                currentValue: config.currentValue,
+                datasource: config.datasource,
+                newValue: update.newValue,
+                bucket: update.bucket,
+              },
+              'update.newDigest is still undefined or null, getDigest returned undefined or null.',
+            );
+          } else {
+            logger.debug(
+              {
+                packageName: config.packageName,
+                currentValue: config.currentValue,
+                datasource: config.datasource,
+                newValue: update.newValue,
+                bucket: update.bucket,
+                newDigest: update.newDigest,
+              },
+              'update.newDigest is defined, getDigest returned a digest.',
+            );
+          }
 
           // If the digest could not be determined, report this as otherwise the
           // update will be omitted later on without notice.
