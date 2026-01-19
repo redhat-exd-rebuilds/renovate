@@ -1089,6 +1089,48 @@ async function getStatus(
   return status;
 }
 
+export async function getBranchStatusCheckNames(
+  branchName: string,
+): Promise<string[]> {
+  logger.debug(`getBranchStatusCheckNames(${branchName})`);
+  const checkNames: string[] = [];
+
+  try {
+    // Get commit statuses (old API)
+    const commitStatus = await getStatus(branchName);
+    if (commitStatus.statuses) {
+      checkNames.push(...commitStatus.statuses.map((status) => status.context));
+    }
+
+    // Get check runs (new API)
+    const checkRunsUrl = `repos/${config.repository}/commits/${escapeHash(
+      branchName,
+    )}/check-runs?per_page=100`;
+    const opts = {
+      headers: {
+        accept: 'application/vnd.github.antiope-preview+json',
+      },
+      paginate: true,
+      paginationField: 'check_runs',
+      cacheProvider: memCacheProvider,
+    };
+    const checkRunsRaw = (
+      await githubApi.getJsonUnchecked<{
+        check_runs: { name: string }[];
+      }>(checkRunsUrl, opts)
+    ).body;
+
+    if (checkRunsRaw.check_runs?.length) {
+      checkNames.push(...checkRunsRaw.check_runs.map((run) => run.name));
+    }
+  } catch (err) {
+    logger.debug({ err }, 'Error retrieving status check names');
+  }
+
+  logger.debug({ checkNames }, 'Retrieved status check names');
+  return checkNames;
+}
+
 // Returns the combined status for a branch.
 export async function getBranchStatus(
   branchName: string,

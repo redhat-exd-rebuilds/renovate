@@ -193,7 +193,7 @@ If you need any further assistance then you can also [request help here](${
         prTitle,
         prBody,
         labels,
-        platformPrOptions: getPlatformPrOptions({
+        platformPrOptions: await getPlatformPrOptions({
           ...config,
           automerge: false,
         }),

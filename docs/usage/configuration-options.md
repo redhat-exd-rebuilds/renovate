@@ -4330,6 +4330,27 @@ For `npm` manager when `replacementApproach=alias` then instead of replacing `"f
 }
 ```
 
+## requireTestsForPlatformAutomerge
+
+When [`platformAutomerge`](#platformautomerge) is set to true (which is also the default state), Renovate will allow automerge immediately after creating a PR. However, you may want to ensure that at least one CI test check is present before allowing automerge.
+
+Use the `requireTestsForPlatformAutomerge` option to enforce this:
+
+```json
+{
+  "automerge": true,
+  "requireTestsForPlatformAutomerge": true
+}
+```
+
+When enabled:
+
+- Renovate will check if there are any test-related CI status checks or runs
+- If no test checks are found, PR will not be set to automerge immediately
+- Platforms that do not support retrieving status check names will skip this check gracefully
+
+This is useful to prevent accidental automerges when there is a delay between PR(MR) creation and the CI pipelines starting.
+
 ## respectLatest
 
 Similar to `ignoreUnstable`, this option controls whether to update to versions that are greater than the version tagged as `latest` in the repository.

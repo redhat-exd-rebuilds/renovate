@@ -269,6 +269,7 @@ export interface Platform {
     // TODO: can be undefined or null ? #22198
     context: string | null | undefined,
   ): Promise<BranchStatus | null>;
+  getBranchStatusCheckNames?(branchName: string): Promise<string[]>;
   ensureCommentRemoval(
     ensureCommentRemoval:
       | EnsureCommentRemovalConfigByTopic

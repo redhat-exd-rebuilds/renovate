@@ -709,7 +709,7 @@ export async function processBranch(
     }
 
     if (branchPr) {
-      const platformPrOptions = getPlatformPrOptions(config);
+      const platformPrOptions = await getPlatformPrOptions(config);
       if (
         platformPrOptions.usePlatformAutomerge &&
         platform.reattemptPlatformAutomerge
