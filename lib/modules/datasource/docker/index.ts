@@ -1,4 +1,4 @@
-import { isNonEmptyString, isString } from '@sindresorhus/is';
+import { isNonEmptyString } from '@sindresorhus/is';
 import { GlobalConfig } from '../../../config/global';
 import { PAGE_NOT_FOUND_ERROR } from '../../../constants/error-messages';
 import { logger } from '../../../logger';
