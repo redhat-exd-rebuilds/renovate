@@ -916,6 +916,15 @@ export class DockerDatasource extends Datasource {
         );
       }
 
+      logger.debug(
+        {
+          registryHost,
+          dockerRepository,
+          currentDigest,
+        },
+        `getImageArchitecture returned ${architecture === '' ? 'EMPTY STRING' : (architecture ?? 'null')}`,
+      );
+
       let manifestResponse: HttpResponse | null = null;
       if (!architecture) {
         manifestResponse = await this.getManifestResponse(
@@ -923,6 +932,15 @@ export class DockerDatasource extends Datasource {
           dockerRepository,
           newTag,
           'head',
+        );
+
+        logger.debug(
+          {
+            registryHost,
+            dockerRepository,
+            newTag,
+          },
+          `Does manifestResponse have docker-content-digest? ${manifestResponse && hasKey('docker-content-digest', manifestResponse.headers)}`,
         );
 
         if (
@@ -941,6 +959,11 @@ export class DockerDatasource extends Datasource {
           }
         }
       }
+
+      logger.debug(
+        { registryHost, dockerRepository },
+        `Architecture checks: isNonEmptyString? ${isNonEmptyString(architecture)}, doesn't have docker-content-digest? ${manifestResponse && !hasKey('docker-content-digest', manifestResponse.headers)}`,
+      );
 
       if (
         isNonEmptyString(architecture) ||
