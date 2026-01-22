@@ -111,7 +111,10 @@ export class DockerDatasource extends Datasource {
         dockerRepository,
       );
       if (!headers) {
-        logger.warn('No docker auth found - returning');
+        logger.warn(
+          { registryHost, dockerRepository, tag },
+          'No docker auth found - returning',
+        );
         return null;
       }
       headers.accept = [
@@ -137,6 +140,16 @@ export class DockerDatasource extends Datasource {
             headers: manifestResponse.headers,
           },
           'Got manifest response from getManifestResponse() call.',
+        );
+      } else {
+        logger.debug(
+          {
+            registryHost,
+            dockerRepository,
+            tag,
+            mode,
+          },
+          'this.http[mode] returned null?',
         );
       }
       return manifestResponse;
