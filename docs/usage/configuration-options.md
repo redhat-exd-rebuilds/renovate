@@ -4398,6 +4398,26 @@ For `npm` manager when `replacementApproach=alias` then instead of replacing `"f
 }
 ```
 
+## requireTestsForPlatformAutomerge
+
+When [`platformAutomerge`](#platformautomerge) is set to true (which is also the default state), Renovate will always allow automerge after creating an MR, no matter if CI tests are present. This is done either immediately, or after ~13 seconds (for GitLab). However, you may want to allow automerge only when CI test checks are present on the MR.
+
+Use the `requireTestsForPlatformAutomerge` option to enforce this:
+
+```json
+{
+  "automerge": true,
+  "requireTestsForPlatformAutomerge": true
+}
+```
+
+When enabled:
+
+- If no CI pipeline is detected after ~13 seconds, Renovate will not enable automerge
+- This option is only supported for the GitLab platform
+
+This is useful to prevent accidental automerges when there is a delay bigger than 13 seconds between MR creation and the CI pipelines starting on GitLab.
+
 ## respectLatest
 
 Similar to `ignoreUnstable`, this option controls whether to update to versions that are greater than the version tagged as `latest` in the repository.
