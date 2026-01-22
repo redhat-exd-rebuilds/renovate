@@ -3167,6 +3167,14 @@ const options: RenovateOptions[] = [
     supportedPlatforms: ['azure', 'forgejo', 'gitea', 'github', 'gitlab'],
   },
   {
+    name: 'requireTestsForPlatformAutomerge',
+    description:
+      'Require at least one CI test status check to be present before allowing automerge.',
+    type: 'boolean',
+    default: false,
+    stage: 'branch',
+  },
+  {
     name: 'userStrings',
     description:
       'User-facing strings for the Renovate comment when a PR is closed.',

@@ -410,6 +410,29 @@ async function getStatus(
   }
 }
 
+export async function getBranchStatusCheckNames(
+  branchName: string,
+): Promise<string[]> {
+  logger.debug(`getBranchStatusCheckNames(${branchName})`);
+  const checkNames: string[] = [];
+
+  try {
+    const branchStatuses = await getStatus(branchName);
+    if (branchStatuses && Array.isArray(branchStatuses)) {
+      checkNames.push(
+        ...branchStatuses
+          .map((status) => status.name)
+          .filter((name): name is string => !!name),
+      );
+    }
+  } catch (err) {
+    logger.debug({ err }, 'Error retrieving GitLab status check names');
+  }
+
+  logger.debug({ checkNames }, 'Retrieved GitLab status check names');
+  return checkNames;
+}
+
 const gitlabToRenovateStatusMapping: Record<BranchState, BranchStatus> = {
   pending: 'yellow',
   created: 'yellow',

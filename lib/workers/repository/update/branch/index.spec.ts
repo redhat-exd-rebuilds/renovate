@@ -140,7 +140,7 @@ describe('workers/repository/update/branch/index', () => {
           number: 5,
         }),
       });
-      prWorker.getPlatformPrOptions.mockReturnValue({
+      prWorker.getPlatformPrOptions.mockResolvedValue({
         usePlatformAutomerge: true,
       });
       GlobalConfig.set(adminConfig);
@@ -3058,7 +3058,7 @@ describe('workers/repository/update/branch/index', () => {
           state: 'open',
         }),
       );
-      prWorker.getPlatformPrOptions.mockReturnValue({
+      prWorker.getPlatformPrOptions.mockResolvedValue({
         usePlatformAutomerge: true,
       });
       GlobalConfig.set({ ...adminConfig, dryRun: 'full' });

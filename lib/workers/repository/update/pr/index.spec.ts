@@ -10,6 +10,7 @@ import { getPrBodyStruct } from '../../../../modules/platform/pr-body';
 import type { Pr } from '../../../../modules/platform/types';
 import { ExternalHostError } from '../../../../types/errors/external-host-error';
 import type { PrCache } from '../../../../util/cache/repository/types';
+import * as ciTestDetection from '../../../../util/ci-test-detection';
 import { fingerprint } from '../../../../util/fingerprint';
 import { toBase64 } from '../../../../util/string';
 import * as _limits from '../../../global/limits';
@@ -21,7 +22,7 @@ import type { ChangeLogChange, ChangeLogRelease } from './changelog/types';
 import * as _participants from './participants';
 import * as _prCache from './pr-cache';
 import { generatePrBodyFingerprintConfig } from './pr-fingerprint';
-import { ensurePr } from '.';
+import { ensurePr, getPlatformPrOptions } from '.';
 import { git, logger, partial, platform, scm } from '~test/util';
 
 vi.mock('../../changelog');
@@ -43,6 +44,9 @@ const comment = vi.mocked(_comment);
 
 vi.mock('./pr-cache');
 const prCache = vi.mocked(_prCache);
+
+vi.mock('../../../../util/ci-test-detection');
+const mockCiTestDetection = vi.mocked(ciTestDetection);
 
 describe('workers/repository/update/pr/index', () => {
   describe('ensurePr', () => {
@@ -1225,6 +1229,92 @@ describe('workers/repository/update/pr/index', () => {
         expect(logger.logger.debug).not.toHaveBeenCalledExactlyOnceWith(
           'PR cache not found',
         );
+      });
+    });
+  });
+  describe('getPlatformPrOptions', () => {
+    beforeEach(() => {
+      vi.resetAllMocks();
+    });
+
+    it('returns usePlatformAutomerge true when automerge enabled', async () => {
+      const result = await getPlatformPrOptions({
+        automerge: true,
+        automergeType: 'pr',
+        platformAutomerge: true,
+      } as any);
+      expect(result.usePlatformAutomerge).toBe(true);
+    });
+
+    it('returns usePlatformAutomerge false when automerge disabled', async () => {
+      const result = await getPlatformPrOptions({
+        automerge: false,
+        platformAutomerge: true,
+      } as any);
+      expect(result.usePlatformAutomerge).toBe(false);
+    });
+
+    describe('requireTestsForPlatformAutomerge', () => {
+      it('disables automerge when no CI checks found', async () => {
+        platform.getBranchStatusCheckNames = vi.fn().mockResolvedValue([]);
+        mockCiTestDetection.hasRelevantStatusChecks.mockReturnValue(false);
+
+        const result = await getPlatformPrOptions({
+          automerge: true,
+          automergeType: 'pr',
+          platformAutomerge: true,
+          requireTestsForPlatformAutomerge: true,
+          branchName: 'renovate/test',
+        } as any);
+
+        expect(result.usePlatformAutomerge).toBe(false);
+      });
+
+      it('enables automerge when CI checks found', async () => {
+        platform.getBranchStatusCheckNames = vi
+          .fn()
+          .mockResolvedValue(['ci/test']);
+        mockCiTestDetection.hasRelevantStatusChecks.mockReturnValue(true);
+
+        const result = await getPlatformPrOptions({
+          automerge: true,
+          automergeType: 'pr',
+          platformAutomerge: true,
+          requireTestsForPlatformAutomerge: true,
+          branchName: 'renovate/test',
+        } as any);
+
+        expect(result.usePlatformAutomerge).toBe(true);
+      });
+
+      it('enables automerge on error (fail-open)', async () => {
+        platform.getBranchStatusCheckNames = vi
+          .fn()
+          .mockRejectedValue(new Error('API error'));
+
+        const result = await getPlatformPrOptions({
+          automerge: true,
+          automergeType: 'pr',
+          platformAutomerge: true,
+          requireTestsForPlatformAutomerge: true,
+          branchName: 'renovate/test',
+        } as any);
+
+        expect(result.usePlatformAutomerge).toBe(true);
+      });
+
+      it('enables automerge when platform does not support getBranchStatusCheckNames', async () => {
+        (platform as any).getBranchStatusCheckNames = undefined;
+
+        const result = await getPlatformPrOptions({
+          automerge: true,
+          automergeType: 'pr',
+          platformAutomerge: true,
+          requireTestsForPlatformAutomerge: true,
+          branchName: 'renovate/test',
+        } as any);
+
+        expect(result.usePlatformAutomerge).toBe(true);
       });
     });
   });
