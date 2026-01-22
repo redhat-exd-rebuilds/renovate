@@ -607,6 +607,7 @@ async function tryPrAutomerge(
         250,
       );
 
+      let testsPresent = false;
       // Check for correct merge request status before setting `merge_when_pipeline_succeeds` to  `true`.
       for (let attempt = 1; attempt <= retryTimes; attempt += 1) {
         const { body } = await gitlabApi.getJsonUnchecked<{
@@ -642,12 +643,19 @@ async function tryPrAutomerge(
           body.pipeline !== null &&
           desiredPipelineStatus.includes(body.pipeline.status)
         ) {
+          testsPresent = true;
           break;
         }
         logger.debug(`PR not yet in mergeable state. Retrying ${attempt}`);
         await setTimeout(mergeDelay * attempt ** 2); // exponential backoff
       }
-
+      
+      if (platformPrOptions.requireTestsForPlatformAutomerge && !testsPresent) {
+        logger.debug(
+          'requireTestsForPlatformAutomerge is enabled and tests are not present, skipping automerge',
+        );
+        return;
+      }
       // The merge_trains endpoint's auto_merge parameter requires GitLab
       // 17.11+. On older versions we fall back to the /merge endpoint so the
       // MR still automerges, just not on the train.
@@ -660,7 +668,6 @@ async function tryPrAutomerge(
           'Merge trains require GitLab 17.11.0 or later, falling back to /merge endpoint',
         );
       }
-
       // Even if Gitlab returns a "merge-able" merge request status, enabling auto-merge sometimes
       // returns a 405 Method Not Allowed. It seems to be a timing issue within Gitlab.
       for (let attempt = 1; attempt <= retryTimes; attempt += 1) {

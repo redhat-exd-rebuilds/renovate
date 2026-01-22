@@ -157,6 +157,7 @@ export interface RenovateSharedConfig {
   repositoryCacheType?: RepositoryCacheType;
   respectLatest?: boolean;
   rollbackPrs?: boolean;
+  requireTestsForPlatformAutomerge?: boolean;
   schedule?: string[];
   semanticCommitScope?: string | null;
   semanticCommitType?: string;
