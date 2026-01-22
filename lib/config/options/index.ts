@@ -3835,6 +3835,14 @@ const options: Readonly<RenovateOptions>[] = [
     ],
   },
   {
+    name: 'requireTestsForPlatformAutomerge',
+    description:
+      'Require at least one CI test status check to be present before allowing automerge.',
+    type: 'boolean',
+    default: false,
+    stage: 'branch',
+  },
+  {
     name: 'userStrings',
     scopes: sharedScopes,
     description:
