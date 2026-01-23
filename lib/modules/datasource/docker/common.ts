@@ -217,6 +217,10 @@ export async function getAuthHeaders(
     /* v8 ignore if */
     if (err.host === 'quay.io') {
       // TODO: debug why quay throws errors (#9604)
+      logger.debug(
+        { err, registryHost, dockerRepository },
+        'quay.io getAuthHeaders error',
+      );
       return null;
     }
     /* v8 ignore if */
