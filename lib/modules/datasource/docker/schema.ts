@@ -108,6 +108,7 @@ export const DistributionManifest = ManifestObject.extend({
   config: Descriptor.extend({
     mediaType: z.literal('application/vnd.docker.container.image.v1+json'),
   }),
+  annotations: z.record(z.string()).nullish(),
 });
 export type DistributionManifest = z.infer<typeof DistributionManifest>;
 
