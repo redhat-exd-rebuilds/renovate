@@ -205,6 +205,7 @@ export interface UpgradeFingerprintConfig {
   newValue?: string;
   newVersion?: string;
   packageFile?: string;
+  packageMetadata?: Record<string, string>;
   replaceString?: string;
 }
 

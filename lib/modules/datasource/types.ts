@@ -32,6 +32,7 @@ export interface GetReleasesConfig {
   packageName: string;
   registryUrl?: string;
   currentValue?: string;
+  packageMetadata?: Record<string, string>;
 }
 
 export interface GetPkgReleasesConfig {
@@ -52,6 +53,7 @@ export interface GetPkgReleasesConfig {
   replacementVersion?: string;
   constraintsFiltering?: ConstraintsFilter;
   registryStrategy?: RegistryStrategy;
+  packageMetadata?: Record<string, string>;
 }
 
 export interface Release {

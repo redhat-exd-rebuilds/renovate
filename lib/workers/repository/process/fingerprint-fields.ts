@@ -17,5 +17,6 @@ export const upgradeFingerprintFields: CommitFingerprintFields[] = [
   'newValue',
   'newVersion',
   'packageFile',
+  'packageMetadata',
   'replaceString',
 ];

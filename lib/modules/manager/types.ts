@@ -175,6 +175,15 @@ export interface PackageDependency<T = Record<string, any>>
 
   mostRecentTimestamp?: Timestamp;
   isAbandoned?: boolean;
+
+  /**
+   * Additional metadata used to uniquely identify this package beyond its name.
+   * Packages with the same name but different packageMetadata are treated as
+   * distinct packages for deduplication and update tracking.
+   * Can also be used with matchPackageMetadata in package rules.
+   * @example { lockFile: "rhel8/rpms.lock.yaml" }
+   */
+  packageMetadata?: Record<string, string>;
 }
 
 export interface Upgrade<T = Record<string, any>> extends PackageDependency<T> {

@@ -10,6 +10,7 @@ import * as packageCache from '../../util/cache/package';
 import type { PackageCacheNamespace } from '../../util/cache/package/types';
 import { clone } from '../../util/clone';
 import { filterMap } from '../../util/filter-map';
+import { serializePackageMetadata } from '../../util/package-metadata';
 import { AsyncResult, Result } from '../../util/result';
 import { DatasourceCacheStats } from '../../util/stats';
 import { trimTrailingSlash } from '../../util/url';
@@ -66,7 +67,10 @@ async function getRegistryReleases(
   registryUrl: string,
 ): Promise<ReleaseResult | null> {
   const cacheNamespace: PackageCacheNamespace = `datasource-releases-${datasource.id}`;
-  const cacheKey = `${registryUrl}:${config.packageName}`;
+  const metadataSuffix = serializePackageMetadata(config.packageMetadata);
+  const cacheKey = metadataSuffix
+    ? `${registryUrl}:${config.packageName}:${metadataSuffix}`
+    : `${registryUrl}:${config.packageName}`;
 
   const cacheEnabled = !!datasource.caching; // tells if `isPrivate` flag is supported in datasource result
   const cacheForced = GlobalConfig.get('cachePrivatePackages', false); // tells if caching is forced via admin config
@@ -394,9 +398,10 @@ function fetchCachedReleases(
   config: GetReleasesInternalConfig,
 ): Promise<ReleaseResult | null> {
   const { datasource, packageName, registryUrls } = config;
+  const metadataSuffix = serializePackageMetadata(config.packageMetadata);
   const cacheKey = `datasource-mem:releases:${datasource}:${packageName}:${config.registryStrategy}:${String(
     registryUrls,
-  )}`;
+  )}${metadataSuffix ? `:${metadataSuffix}` : ''}`;
   // By returning a Promise and reusing it, we should only fetch each package at most once
   const cachedResult = memCache.get<Promise<ReleaseResult | null>>(cacheKey);
   // istanbul ignore if

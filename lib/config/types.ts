@@ -435,6 +435,7 @@ export interface PackageRule
   matchSourceUrls?: string[];
   matchUpdateTypes?: UpdateType[];
   matchJsonata?: string[];
+  matchPackageMetadata?: Record<string, string>;
   registryUrls?: string[] | null;
   vulnerabilitySeverity?: string;
   vulnerabilityFixVersion?: string;
@@ -615,6 +616,7 @@ export interface PackageRuleInputConfig extends Record<string, unknown> {
   enabled?: boolean;
   skipReason?: SkipReason;
   skipStage?: StageName;
+  packageMetadata?: Record<string, string>;
 }
 
 export interface ConfigMigration {

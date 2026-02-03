@@ -27,11 +27,11 @@ export function generateCommitFingerprintConfig(
   branch: BranchConfig,
 ): UpgradeFingerprintConfig[] {
   const res = branch.upgrades.map((upgrade) => {
-    const filteredUpgrade = {} as UpgradeFingerprintConfig;
+    const filteredUpgrade: Record<string, unknown> = {};
     for (const field of upgradeFingerprintFields) {
       filteredUpgrade[field] = upgrade[field];
     }
-    return filteredUpgrade;
+    return filteredUpgrade as UpgradeFingerprintConfig;
   });
 
   return res;

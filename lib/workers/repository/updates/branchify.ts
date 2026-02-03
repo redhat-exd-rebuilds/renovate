@@ -2,6 +2,7 @@
 import type { Merge } from 'type-fest';
 import type { RenovateConfig, ValidationMessage } from '../../../config/types';
 import { addMeta, logger, removeMeta } from '../../../logger';
+import { createUpgradeKey } from '../../../util/package-metadata';
 import type { BranchConfig, BranchUpgradeConfig } from '../../types';
 import { flattenUpdates } from './flatten';
 import { generateBranchConfig } from './generate';
@@ -47,10 +48,21 @@ export async function branchifyUpgrades(
     branchUpgrades[branchName] = branchUpgrades[branchName]
       .reverse()
       .filter((upgrade) => {
-        const { manager, packageFile, depName, currentValue, newValue } =
-          upgrade;
+        const {
+          manager,
+          packageFile,
+          depName,
+          currentValue,
+          newValue,
+          packageMetadata,
+        } = upgrade;
         // TODO: types (#22198)
-        const upgradeKey = `${packageFile!}:${depName!}:${currentValue!}`;
+        const upgradeKey = createUpgradeKey(
+          packageFile!,
+          depName!,
+          currentValue!,
+          packageMetadata,
+        );
         const previousNewValue = seenUpdates[upgradeKey];
         if (previousNewValue && previousNewValue !== newValue) {
           logger.info(
