@@ -15,6 +15,7 @@ import {
 import { logger, scm } from '~test/util.ts';
 
 const createVulnerabilitiesMock = vi.fn();
+const createContainerVulnerabilitiesMock = vi.fn();
 
 vi.mock('./write.ts');
 vi.mock('./sort.ts');
@@ -32,6 +33,16 @@ vi.mock('./vulnerabilities.ts', () => {
 vi.mock('../updates/branchify.ts');
 vi.mock('../extract/index.ts');
 vi.mock('../../../util/cache/repository/index.ts');
+vi.mock('./container-vulnerabilities', () => {
+  return {
+    __esModule: true,
+    ContainerVulnerabilities: class {
+      static create() {
+        return createContainerVulnerabilitiesMock();
+      }
+    },
+  };
+});
 
 const branchify = vi.mocked(_branchify);
 const repositoryCache = vi.mocked(_repositoryCache);
@@ -121,10 +132,16 @@ describe('workers/repository/process/extract-update', () => {
       const config = {
         repoIsOnboarded: true,
         osvVulnerabilityAlerts: true,
+        containerVulnerabilityAlerts: true,
       };
       const appendVulnerabilityPackageRulesMock = vi.fn();
       createVulnerabilitiesMock.mockResolvedValueOnce({
         appendVulnerabilityPackageRules: appendVulnerabilityPackageRulesMock,
+      });
+      const appendContainerVulnerabilityPackageRulesMock = vi.fn();
+      createContainerVulnerabilitiesMock.mockResolvedValueOnce({
+        appendVulnerabilityPackageRules:
+          appendContainerVulnerabilityPackageRulesMock,
       });
       repositoryCache.getCache.mockReturnValueOnce({ scan: {} });
       scm.checkoutBranch.mockResolvedValueOnce('123test' as LongCommitSha);
@@ -139,9 +156,14 @@ describe('workers/repository/process/extract-update', () => {
         {
           repoIsOnboarded: true,
           osvVulnerabilityAlerts: true,
+          containerVulnerabilityAlerts: true,
         },
         undefined,
       );
+      expect(createContainerVulnerabilitiesMock).toHaveBeenCalledOnce();
+      expect(
+        appendContainerVulnerabilityPackageRulesMock,
+      ).toHaveBeenCalledOnce();
     });
 
     it('handles exception when fetching vulnerabilities', async () => {
