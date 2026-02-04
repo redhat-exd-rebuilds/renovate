@@ -2366,6 +2366,23 @@ const options: Readonly<RenovateOptions>[] = [
     experimentalIssues: [20542],
   },
   {
+    name: 'rpmVulnerabilityAlerts',
+    description: 'Enable vulnerability alerts for RPMs.',
+    type: 'boolean',
+    default: false,
+    experimental: true,
+    experimentalIssues: [20542],
+  },
+  {
+    name: 'rpmVulnerabilityAutomerge',
+    description:
+      'Set at what criticality level should RPM vulnerability PRs be automerged.',
+    type: 'string',
+    default: null,
+    experimental: true,
+    allowedValues: ['ALL', 'MEDIUM', 'HIGH', 'CRITICAL'],
+  },
+  {
     name: 'pruneBranchAfterAutomerge',
     description: 'Set to `true` to enable branch pruning after automerging.',
     type: 'boolean',

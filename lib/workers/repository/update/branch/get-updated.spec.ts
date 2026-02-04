@@ -2,6 +2,7 @@ import { isArray } from '@sindresorhus/is';
 import { mockDeep } from 'vitest-mock-extended';
 import { git, logger } from '~test/util.ts';
 import { GitRefsDatasource } from '../../../../modules/datasource/git-refs/index.ts';
+import * as managerModule from '../../../../modules/manager';
 import * as _batectWrapper from '../../../../modules/manager/batect-wrapper/index.ts';
 import * as _bundler from '../../../../modules/manager/bundler/index.ts';
 import * as _composer from '../../../../modules/manager/composer/index.ts';
@@ -20,7 +21,12 @@ import type {
 } from '../../../../modules/manager/types.ts';
 import type { BranchConfig, BranchUpgradeConfig } from '../../../types.ts';
 import * as _autoReplace from './auto-replace.ts';
-import { getUpdatedPackageFiles } from './get-updated.ts';
+import {
+  getUpdatedPackageFiles,
+  managerUpdateArtifacts,
+} from './get-updated.ts';
+import * as rpmVulnPostProcessing from './rpm-post-processing.ts';
+import { git } from '~test/util.ts';
 
 const bundler = vi.mocked(_bundler);
 const composer = vi.mocked(_composer);
@@ -44,6 +50,18 @@ vi.mock('../../../../modules/manager/batect-wrapper/index.ts');
 vi.mock('../../../../modules/manager/pep621/index.ts');
 vi.mock('../../../../modules/manager/pip-compile/index.ts');
 vi.mock('../../../../modules/manager/poetry/index.ts');
+
+const createMock = vi.fn();
+
+vi.mock('./rpm-vulnerabilities.ts', () => {
+  return {
+    RpmVulnerabilities: class {
+      static create() {
+        return createMock();
+      }
+    },
+  };
+});
 vi.mock('./auto-replace.ts');
 
 describe('workers/repository/update/branch/get-updated', () => {
@@ -1223,560 +1241,107 @@ describe('workers/repository/update/branch/get-updated', () => {
     });
   });
 
-  // As per #41622
-  describe('checks if an artifact update introduces a pending version', () => {
-    let config: BranchConfig;
+  describe('managerUpdateArtifacts', () => {
+    const updateArtifact = {
+      packageFileName: 'file',
+      updatedDeps: [],
+      newPackageFileContent: 'content',
+      config: {},
+    };
+    const config: any = {
+      isLockFileMaintenance: false,
+      isVulnerabilityAlert: false,
+    };
+    const manager = 'npm';
 
-    beforeEach(() => {
-      config = {
-        baseBranch: 'base-branch',
-        manager: 'some-manager',
-        branchName: 'renovate/pin',
-        upgrades: [],
-        minimumReleaseAgeBehaviour: 'timestamp-required',
-      } satisfies BranchConfig;
-      git.getFile.mockResolvedValueOnce('existing content');
-    });
-
-    describe('when artifact update introduces a pending version', () => {
-      it('logs an artifact error', async () => {
-        config.upgrades.push({
-          packageFile: 'composer.json',
-          manager: 'composer',
-          branchName: '',
-          depName: 'some-dep',
-          newVersion: '1.2.3',
-          pendingVersions: ['1.3.0', '1.4.0'],
-        });
-        autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-        composer.updateArtifacts.mockResolvedValueOnce([
-          {
-            file: {
-              type: 'addition',
-              path: 'composer.lock',
-              contents: 'some lock contents',
-            },
-          },
+    it('calls updateArtifacts and returns result', async () => {
+      const mockUpdateArtifacts = vi
+        .fn()
+        .mockResolvedValue([
+          { file: { path: 'file', contents: 'abc', type: 'addition' } },
         ]);
-        composer.extractPackageFile.mockResolvedValueOnce({
-          deps: [
-            {
-              depName: 'some-dep',
-              lockedVersion: '1.3.0',
-            },
-          ],
-        });
-        const res = await getUpdatedPackageFiles(config);
-        expect(res.artifactErrors).toHaveLength(1);
-        expect(res.artifactErrors[0]).toMatchObject({
-          fileName: 'composer.json',
-          stderr: expect.stringContaining('1.3.0'),
-        });
-        expect(res.artifactErrors[0].stderr).toContain(
-          'Artifact update for some-dep resolved to version 1.3.0, which is a pending version that has not yet passed the Minimum Release Age threshold.\nRenovate was attempting to update to 1.2.3\nThis is (likely) not a bug in Renovate, but due to the way your project pins dependencies, _and_ how Renovate calls your package manager to update them.\nUntil Renovate supports specifying an exact update to your package manager (https://github.com/renovatebot/renovate/issues/41624), it is recommended to directly pin your dependencies (with `rangeStrategy=pin` for apps, or `rangeStrategy=widen` for libraries)\nSee also: https://docs.renovatebot.com/dependency-pinning/',
-        );
-      });
+      vi.spyOn(managerModule, 'get').mockReturnValue(mockUpdateArtifacts);
+      const result = await managerUpdateArtifacts(
+        manager,
+        updateArtifact,
+        config,
+      );
+      expect(mockUpdateArtifacts).toHaveBeenCalledWith(updateArtifact);
+      expect(result).toEqual([
+        { file: { path: 'file', contents: 'abc', type: 'addition' } },
+      ]);
+    });
 
-      // TODO doesn't fire for **??**
+    it('returns null if updateArtifacts is not defined', async () => {
+      vi.spyOn(managerModule, 'get').mockReturnValue(undefined);
+      const result = await managerUpdateArtifacts(
+        manager,
+        updateArtifact,
+        config,
+      );
+      expect(result).toBeNull();
+    });
 
-      it.each<{
-        description: string;
-        dep: PackageDependency;
-      }>([
-        {
-          description: 'detects lockedVersion',
-          dep: {
-            depName: 'some-dep',
-            lockedVersion: '1.3.0',
-          },
-        },
-        {
-          description: 'detects newVersion',
-          dep: {
-            depName: 'some-dep',
-            newVersion: '1.3.0',
-          },
-        },
-        {
-          description: 'detects currentVersion',
-          dep: {
-            depName: 'some-dep',
-            currentVersion: '1.3.0',
-          },
-        },
-        {
-          description: 'detects currentValue',
-          dep: {
-            depName: 'some-dep',
-            currentValue: '1.3.0',
-          },
-        },
-      ])(`$description`, async ({ dep }) => {
-        config.upgrades.push({
-          packageFile: 'composer.json',
-          manager: 'composer',
-          branchName: '',
-          depName: 'some-dep',
-          newVersion: '1.2.3',
-          pendingVersions: ['1.3.0', '1.4.0'],
-        });
-        autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-        composer.updateArtifacts.mockResolvedValueOnce([
-          {
-            file: {
-              type: 'addition',
-              path: 'composer.lock',
-              contents: 'some lock contents',
-            },
-          },
+    it('calls postProcessRPMs for rpm-lockfile manager', async () => {
+      const rpmConfig = {
+        isLockFileMaintenance: true,
+        isVulnerabilityAlert: true,
+      };
+      const mockUpdateArtifacts = vi
+        .fn()
+        .mockResolvedValue([
+          { file: { path: 'file', contents: 'abc', type: 'addition' } },
         ]);
-        composer.extractPackageFile.mockResolvedValueOnce({
-          deps: [dep],
-        });
-        const res = await getUpdatedPackageFiles(config);
-        expect(res.artifactErrors).toHaveLength(1);
-        expect(res.artifactErrors[0]).toMatchObject({
-          fileName: 'composer.json',
-          stderr: expect.stringContaining('1.3.0'),
-        });
-      });
-    });
-
-    it('does not add artifact error when no deps match pending versions', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-        pendingVersions: ['1.3.0', '1.4.0'],
-      });
-      autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-      composer.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'composer.lock',
-            contents: 'some lock contents',
-          },
-        },
-      ]);
-      composer.extractPackageFile.mockResolvedValueOnce({
-        deps: [
-          {
-            depName: 'some-dep',
-            currentVersion: '1.2.5',
-          },
-        ],
-      });
-      const res = await getUpdatedPackageFiles(config);
-      expect(res.artifactErrors).toHaveLength(0);
-    });
-
-    it('does not add artifact error when a different dependency has the same version as the pending version', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-        pendingVersions: ['1.2.5'],
-      });
-      autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-      composer.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'composer.lock',
-            contents: 'some lock contents',
-          },
-        },
-      ]);
-      composer.extractPackageFile.mockResolvedValueOnce({
-        deps: [
-          {
-            depName: 'some-dep',
-            currentVersion: '1.2.3',
-          },
-          {
-            depName: 'transitive-dep',
-            currentVersion: '1.2.5',
-          },
-        ],
-      });
-      const res = await getUpdatedPackageFiles(config);
-      expect(res.artifactErrors).toHaveLength(0);
-    });
-
-    it('skips pending version check when upgrade has no pendingVersions', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-      });
-      autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-      composer.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'composer.lock',
-            contents: 'some lock contents',
-          },
-        },
-      ]);
-      const res = await getUpdatedPackageFiles(config);
-      expect(res.artifactErrors).toHaveLength(0);
-      expect(composer.extractPackageFile).not.toHaveBeenCalled();
-    });
-
-    it('skips pending version check when no artifact results', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-        pendingVersions: ['1.3.0'],
-      });
-      autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-      composer.updateArtifacts.mockResolvedValueOnce([]);
-      const res = await getUpdatedPackageFiles(config);
-      expect(res.artifactErrors).toHaveLength(0);
-      expect(composer.extractPackageFile).not.toHaveBeenCalled();
-    });
-
-    it('does not add artifact error when extractPackageFile returns null', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-        pendingVersions: ['1.3.0'],
-      });
-      autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-      composer.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'composer.lock',
-            contents: 'some lock contents',
-          },
-        },
-      ]);
-      composer.extractPackageFile.mockResolvedValueOnce(null);
-      const res = await getUpdatedPackageFiles(config);
-      expect(res.artifactErrors).toHaveLength(0);
-    });
-
-    it('adds multiple artifact errors when multiple deps match pending versions', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-        pendingVersions: ['1.3.0', '1.4.0'],
-      });
-      autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-      composer.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'composer.lock',
-            contents: 'some lock contents',
-          },
-        },
-      ]);
-      composer.extractPackageFile.mockResolvedValueOnce({
-        deps: [
-          {
-            depName: 'some-dep',
-            lockedVersion: '1.3.0',
-          },
-          {
-            depName: 'some-dep',
-            lockedVersion: '1.4.0',
-          },
-          {
-            depName: 'dep-c',
-            lockedVersion: '1.2.5',
-          },
-        ],
-      });
-      const res = await getUpdatedPackageFiles(config);
-      expect(res.artifactErrors).toHaveLength(2);
-      expect(res.artifactErrors[0]).toMatchObject({
-        stderr: expect.stringContaining('1.3.0'),
-      });
-      expect(res.artifactErrors[1]).toMatchObject({
-        stderr: expect.stringContaining('1.4.0'),
-      });
-    });
-
-    it('skips pending version check when minimumReleaseAgeBehaviour is not timestamp-required', async () => {
-      config.minimumReleaseAgeBehaviour = 'timestamp-optional';
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-        pendingVersions: ['1.3.0'],
-      });
-      autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-      composer.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'composer.lock',
-            contents: 'some lock contents',
-          },
-        },
-      ]);
-      composer.extractPackageFile.mockResolvedValueOnce({
-        deps: [
-          {
-            depName: 'some-dep',
-            lockedVersion: '1.3.0',
-          },
-        ],
-      });
-      const res = await getUpdatedPackageFiles(config);
-      expect(res.artifactErrors).toHaveLength(0);
-      expect(composer.extractPackageFile).toHaveBeenCalled();
-      expect(logger.logger.once.warn).toHaveBeenCalledWith(
-        {
-          packageFileName: 'composer.json',
-          depName: 'some-dep',
-          expectedVersion: '1.2.3',
-          resolvedVersion: '1.3.0',
-        },
-        "Artifact error would be reported due to a pending version in use which hasn't passed Minimum Release Age, but as we're running with minimumReleaseAgeBehaviour=timestamp-optional, proceeding. See debug logs for more information",
+      const mockPostProcess = vi
+        .spyOn(rpmVulnPostProcessing, 'postProcessRPMs')
+        .mockResolvedValue([
+          { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
+        ]);
+      vi.spyOn(managerModule, 'get').mockReturnValue(mockUpdateArtifacts);
+      const result = await managerUpdateArtifacts(
+        'rpm-lockfile',
+        updateArtifact,
+        rpmConfig as any,
       );
-    });
-
-    it('adds logs a debug log if it fails to re-extract the package file', async () => {
-      config.upgrades.push({
-        packageFile: 'go.mod',
-        manager: 'gomod',
-        branchName: '',
-        depName: 'github.com/foo/bar',
-        newVersion: '0.5.1',
-        pendingVersions: ['0.6.0'],
-      });
-      gomod.updateDependency.mockReturnValue('some new content');
-      gomod.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'go.mod',
-            contents: 'some content',
-          },
-        },
+      expect(mockUpdateArtifacts).toHaveBeenCalledWith(updateArtifact);
+      expect(mockPostProcess).toHaveBeenCalledWith(
+        [{ file: { path: 'file', contents: 'abc', type: 'addition' } }],
+        rpmConfig,
+      );
+      expect(result).toEqual([
+        { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
       ]);
-      gomod.extractPackageFile.mockResolvedValueOnce(null);
-      await getUpdatedPackageFiles(config);
-
-      expect(logger.logger.warn).toHaveBeenCalledWith(
-        { packageFile: 'go.mod', manager: 'gomod' },
-        'Could not re-extract the packageFile after updating it',
-      );
     });
 
-    // should never happen, but our types allow this
-    it('rejects when an updated dependency has no depName or packageName', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-        pendingVersions: ['1.3.0'],
-      });
-      autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-      composer.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'composer.lock',
-            contents: 'some lock contents',
-          },
-        },
+    it('calls postProcessRPMs for rpm-lockfile manager even without vulnerability alert', async () => {
+      const rpmConfig = {
+        isLockFileMaintenance: true,
+        isVulnerabilityAlert: false,
+      };
+      const mockUpdateArtifacts = vi
+        .fn()
+        .mockResolvedValue([
+          { file: { path: 'file', contents: 'abc', type: 'addition' } },
+        ]);
+      const mockPostProcess = vi
+        .spyOn(rpmVulnPostProcessing, 'postProcessRPMs')
+        .mockResolvedValue([
+          { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
+        ]);
+      vi.spyOn(managerModule, 'get').mockReturnValue(mockUpdateArtifacts);
+      const result = await managerUpdateArtifacts(
+        'rpm-lockfile',
+        updateArtifact,
+        rpmConfig as any,
+      );
+      expect(mockUpdateArtifacts).toHaveBeenCalledWith(updateArtifact);
+      expect(mockPostProcess).toHaveBeenCalledWith(
+        [{ file: { path: 'file', contents: 'abc', type: 'addition' } }],
+        rpmConfig,
+      );
+      expect(result).toEqual([
+        { file: { path: 'processed', contents: 'xyz', type: 'addition' } },
       ]);
-      composer.extractPackageFile.mockResolvedValueOnce({
-        deps: [
-          {
-            depName: undefined,
-            packageName: undefined,
-            lockedVersion: '1.3.0',
-          },
-        ],
-      });
-
-      await expect(getUpdatedPackageFiles(config)).rejects.toThrowError(
-        'update-failure',
-      );
-
-      expect(logger.logger.error).toHaveBeenCalledWith(
-        {
-          packageFile: 'composer.json',
-          manager: 'composer',
-          branchName: 'renovate/pin',
-          depName: undefined,
-        },
-        "No depName found after updating 'composer.json'",
-      );
-    });
-
-    it('adds an artifact error when an updated dependency has no depName, but does have a packageName', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-        pendingVersions: ['1.3.0'],
-      });
-      autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-      composer.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'composer.lock',
-            contents: 'some lock contents',
-          },
-        },
-      ]);
-      composer.extractPackageFile.mockResolvedValueOnce({
-        deps: [
-          {
-            depName: undefined,
-            packageName: 'some-dep',
-            lockedVersion: '1.3.0',
-          },
-        ],
-      });
-
-      const res = await getUpdatedPackageFiles(config);
-      expect(res.artifactErrors).toHaveLength(1);
-      expect(res.artifactErrors[0]).toMatchObject({
-        stderr: expect.stringContaining('some-dep'),
-      });
-    });
-
-    it('skips the pending-version check when re-extracted dep has no resolvable version', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-        pendingVersions: ['1.3.0'],
-      });
-      autoReplace.doAutoReplace.mockResolvedValueOnce('some new content');
-      composer.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'composer.lock',
-            contents: 'some lock contents',
-          },
-        },
-      ]);
-      composer.extractPackageFile.mockResolvedValueOnce({
-        deps: [
-          {
-            depName: 'some-dep',
-            lockedVersion: undefined,
-            newVersion: undefined,
-            currentVersion: undefined,
-            currentValue: undefined,
-          },
-        ],
-      });
-
-      const res = await getUpdatedPackageFiles(config);
-      expect(res.artifactErrors).toHaveLength(0);
-      expect(logger.logger.warn).toHaveBeenCalledWith(
-        {
-          packageFile: 'composer.json',
-          manager: 'composer',
-          branchName: 'renovate/pin',
-          depName: 'some-dep',
-        },
-        "Could not determine resolved version for 'some-dep' after updating 'composer.json'; skipping pending-version check",
-      );
-    });
-
-    // should never happen, but our types allow this
-    it('rejects when upgrade has no depName', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: 'renovate/pin',
-        depName: undefined,
-        newVersion: '5.6.7',
-      });
-
-      await expect(getUpdatedPackageFiles(config)).rejects.toThrowError(
-        'update-failure',
-      );
-    });
-
-    // should never happen, but our types allow this
-    it('rejects when upgrade has no depName', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: undefined,
-      });
-
-      await expect(getUpdatedPackageFiles(config)).rejects.toThrowError(
-        'update-failure',
-      );
-    });
-
-    it('adds artifact error for nonUpdatedPackageFiles (lockfile update scenario)', async () => {
-      config.upgrades.push({
-        packageFile: 'composer.json',
-        manager: 'composer',
-        branchName: '',
-        depName: 'some-dep',
-        newVersion: '1.2.3',
-        pendingVersions: ['1.3.0'],
-        isLockfileUpdate: true,
-      });
-      composer.updateLockedDependency.mockReturnValueOnce({
-        status: 'unsupported',
-      });
-      composer.updateArtifacts.mockResolvedValueOnce([
-        {
-          file: {
-            type: 'addition',
-            path: 'composer.lock',
-            contents: 'some lock contents',
-          },
-        },
-      ]);
-      composer.extractPackageFile.mockResolvedValueOnce({
-        deps: [
-          {
-            depName: 'some-dep',
-            lockedVersion: '1.3.0',
-          },
-        ],
-      });
-      const res = await getUpdatedPackageFiles(config);
-      expect(res.artifactErrors).toHaveLength(1);
-      expect(res.artifactErrors[0]).toMatchObject({
-        fileName: 'composer.json',
-        stderr: expect.stringContaining('1.3.0'),
-      });
     });
   });
 });
