@@ -179,6 +179,36 @@ export class DockerDatasource extends Datasource {
     }
   }
 
+  async getImageConfigFull(
+    registryHost: string,
+    dockerRepository: string,
+    configDigest: string,
+  ): Promise<HttpResponse | undefined> {
+    logger.debug(
+      `getImageConfigFull(${registryHost}, ${dockerRepository}, ${configDigest})`,
+    );
+
+    const headers = await getAuthHeaders(
+      this.http,
+      registryHost,
+      dockerRepository,
+    );
+    // istanbul ignore if: Should never happen
+    if (!headers) {
+      logger.warn('No docker auth found - returning');
+      return undefined;
+    }
+    const url = joinUrlParts(
+      registryHost,
+      'v2',
+      dockerRepository,
+      'blobs',
+      configDigest,
+    );
+    const result = await this.http.getText(url, { headers, noAuth: true });
+    return result;
+  }
+
   private async _getImageConfig(
     registryHost: string,
     dockerRepository: string,
@@ -281,7 +311,7 @@ export class DockerDatasource extends Datasource {
     );
   }
 
-  private async getConfigDigest(
+  async getConfigDigest(
     registry: string,
     dockerRepository: string,
     tag: string,
