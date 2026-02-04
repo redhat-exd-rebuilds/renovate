@@ -185,6 +185,8 @@
     "@renovatebot/ruby-semver": "5.0.0",
     "@sindresorhus/is": "8.1.0",
     "@yarnpkg/core": "4.8.0",
+    "@mintmaker/osv-offline": "1.1.1",
+    "@mintmaker/osv-offline-db": "1.2.0",
     "@yarnpkg/parsers": "3.0.3",
     "adm-zip": "0.5.17",
     "ae-cvss-calculator": "1.0.12",
