@@ -680,6 +680,31 @@ describe('modules/datasource/index', () => {
               expect.any(Number),
             );
           });
+
+          it('never caches when neverCache=true, even with forced caching', async () => {
+            class NeverCacheDatasource extends CachingDatasource {
+              override neverCache = true;
+            }
+
+            GlobalConfig.set({ cachePrivatePackages: true });
+            const registries = {
+              'https://reg1.com': {
+                releases: [{ version: '0.0.1' }, { version: '0.0.2' }],
+              },
+            } satisfies RegistriesMock;
+            datasources.set(datasource, new NeverCacheDatasource(registries));
+
+            const res = await getPkgReleases({
+              datasource,
+              packageName,
+              registryUrls: ['https://reg1.com'],
+            });
+            expect(res).toMatchObject({
+              releases: [{ version: '0.0.1' }, { version: '0.0.2' }],
+            });
+            expect(packageCache.set).not.toHaveBeenCalled();
+            expect(packageCache.get).not.toHaveBeenCalled();
+          });
         });
 
         it('merges registries and aborts on ExternalHostError', async () => {

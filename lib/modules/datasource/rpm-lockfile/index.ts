@@ -20,6 +20,8 @@ export class RpmLockfileDatasource extends Datasource {
 
   override readonly caching = false;
 
+  override readonly neverCache = true;
+
   constructor() {
     super(RpmLockfileDatasource.id);
   }

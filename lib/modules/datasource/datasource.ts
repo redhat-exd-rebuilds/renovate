@@ -19,6 +19,13 @@ export abstract class Datasource implements DatasourceApi {
 
   caching: boolean | undefined;
 
+  /**
+   * If true, this datasource will never use caching, even if admin forces it
+   * via cachePrivatePackages. Use this for datasources where caching provides
+   * no benefit or could cause correctness issues.
+   */
+  neverCache?: boolean;
+
   customRegistrySupport = true;
 
   defaultConfig: Record<string, unknown> | undefined;
