@@ -15,6 +15,7 @@ import type { BranchConfig } from '../../types.ts';
 import { generateFingerprintConfig } from '../extract/extract-fingerprint-config.ts';
 import { extractAllDependencies } from '../extract/index.ts';
 import { branchifyUpgrades } from '../updates/branchify.ts';
+import { ContainerVulnerabilities } from './container-vulnerabilities.ts';
 import { fetchUpdates } from './fetch.ts';
 import { calculateLibYears } from './libyear.ts';
 import { sortBranches } from './sort.ts';
@@ -225,6 +226,29 @@ async function fetchVulnerabilities(
   }
 }
 
+async function fetchContainerVulnerabilities(
+  config: RenovateConfig,
+  packageFiles: Record<string, PackageFile[]>,
+): Promise<void> {
+  if (config.containerVulnerabilityAlerts) {
+    logger.debug(
+      'fetchDockerVulnerabilities() - containerVulnerabilityAlerts=true',
+    );
+    try {
+      const vulnerabilities = await ContainerVulnerabilities.create();
+      await vulnerabilities.appendVulnerabilityPackageRules(
+        config,
+        packageFiles,
+      );
+    } catch (err) {
+      logger.warn(
+        { err },
+        'Unable to read container vulnerability information',
+      );
+    }
+  }
+}
+
 export async function lookup(
   config: RenovateConfig,
   packageFiles: Record<string, PackageFile[]>,
@@ -233,7 +257,7 @@ export async function lookup(
   await fetchUpdates(config, packageFiles);
   // call this twice, as the second time, the updates will be availalbe for malicious package checks
   // TODO: this will be refactored as part of #42423
-  await fetchVulnerabilities(config, packageFiles);
+  await fetchContainerVulnerabilities(config, packageFiles);
   memCache.cleanDatasourceKeys();
   calculateLibYears(config, packageFiles);
   const { branches, branchList } = await branchifyUpgrades(
