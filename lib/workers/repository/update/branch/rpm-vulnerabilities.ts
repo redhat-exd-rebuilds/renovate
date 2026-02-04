@@ -1,0 +1,471 @@
+// TODO #22198
+import type { Ecosystem, Osv } from '@mintmaker/osv-offline';
+import { OsvOffline } from '@mintmaker/osv-offline';
+import is from '@sindresorhus/is';
+import type { RenovateConfig } from '../../../../config/types.ts';
+import { logger } from '../../../../logger/index.ts';
+import { getDefaultVersioning } from '../../../../modules/datasource/common.ts';
+import type {
+  PackageDependency,
+  PackageFile,
+} from '../../../../modules/manager/types.ts';
+import type { VersioningApi } from '../../../../modules/versioning/index.ts';
+import { get as getVersioning } from '../../../../modules/versioning/index.ts';
+import { findGithubToken } from '../../../../util/check-token.ts';
+import { find } from '../../../../util/host-rules.ts';
+import { sanitizeMarkdown } from '../../../../util/markdown.ts';
+import { regEx } from '../../../../util/regex.ts';
+import { titleCase } from '../../../../util/string.ts';
+import type {
+  DependencyVulnerabilities,
+  SeverityDetails,
+  Vulnerability,
+} from '../../process/types.ts';
+import { Vulnerabilities } from '../../process/vulnerabilities.ts';
+
+export class RpmVulnerabilities {
+  private osvOffline: OsvOffline | undefined;
+
+  private static readonly datasourceEcosystemMap: Record<
+    string,
+    Ecosystem | undefined
+  > = {
+    'rpm-lockfile': 'RPM',
+  };
+
+  private constructor() {
+    // Private constructor to prevent direct instantiation
+  }
+
+  private async initialize(): Promise<void> {
+    // hard-coded logic to use authentication for github.com based on the githubToken for api.github.com
+    const token = findGithubToken(
+      find({
+        hostType: 'github',
+        url: 'https://api.github.com/',
+      }),
+    );
+
+    this.osvOffline = await OsvOffline.create(token);
+  }
+
+  static async create(): Promise<RpmVulnerabilities> {
+    const instance = new RpmVulnerabilities();
+    await instance.initialize();
+    return instance;
+  }
+
+  async fetchDependencyVulnerability(
+    packageFileConfig: RenovateConfig & PackageFile,
+    dep: PackageDependency,
+    filterNonFixed = false,
+  ): Promise<DependencyVulnerabilities | null> {
+    const ecosystem =
+      RpmVulnerabilities.datasourceEcosystemMap[dep.datasource!];
+
+    if (!ecosystem) {
+      logger.trace(`Cannot map datasource ${dep.datasource!} to OSV ecosystem`);
+      return null;
+    }
+
+    let packageName = dep.packageName ?? dep.depName!;
+    if (ecosystem === 'PyPI') {
+      // https://peps.python.org/pep-0503/#normalized-names
+      packageName = packageName.toLowerCase().replace(regEx(/[_.-]+/g), '-');
+    }
+
+    try {
+      const osvVulnerabilities = await this.osvOffline?.getVulnerabilities(
+        ecosystem,
+        packageName,
+      );
+      if (
+        is.nullOrUndefined(osvVulnerabilities) ||
+        is.emptyArray(osvVulnerabilities)
+      ) {
+        logger.trace(
+          `No vulnerabilities found in OSV database for ${packageName}`,
+        );
+        return null;
+      }
+
+      const depVersion =
+        dep.lockedVersion ?? dep.currentVersion ?? dep.currentValue!;
+
+      const versioning = dep.versioning ?? getDefaultVersioning(dep.datasource);
+      const versioningApi = getVersioning(versioning);
+
+      if (!versioningApi.isVersion(depVersion)) {
+        logger.debug(
+          `Skipping vulnerability lookup for package ${packageName} due to unsupported version ${depVersion}`,
+        );
+        return null;
+      }
+
+      const vulnerabilities: Vulnerability[] = [];
+      for (const osvVulnerability of osvVulnerabilities) {
+        if (osvVulnerability.withdrawn) {
+          logger.trace(
+            `Skipping withdrawn vulnerability ${osvVulnerability.id}`,
+          );
+          continue;
+        }
+
+        for (const affected of osvVulnerability.affected ?? []) {
+          const isVulnerable = this.isPackageVulnerable(
+            ecosystem,
+            packageName,
+            depVersion,
+            affected,
+            versioningApi,
+          );
+          if (!isVulnerable) {
+            continue;
+          }
+
+          logger.debug(
+            `Vulnerability ${osvVulnerability.id} affects ${packageName} ${depVersion}`,
+          );
+          const fixedVersion = this.getFixedVersion(
+            ecosystem,
+            depVersion,
+            affected,
+            versioningApi,
+          );
+
+          const parsedFixedVersion =
+            fixedVersion?.replace(/^>=\s*/, '') ?? null;
+
+          if (
+            filterNonFixed &&
+            this.isVersionGt(
+              parsedFixedVersion!,
+              dep.newVersion!,
+              versioningApi,
+            )
+          ) {
+            logger.debug(
+              `Skipping vulnerability ${osvVulnerability.id} because it is not fixed in the new version ${dep.newVersion} (${fixedVersion})`,
+            );
+            continue;
+          }
+
+          vulnerabilities.push({
+            packageName,
+            vulnerability: osvVulnerability,
+            affected,
+            depVersion,
+            fixedVersion,
+            datasource: dep.datasource!,
+            packageFileConfig,
+          });
+        }
+      }
+
+      return { vulnerabilities, versioningApi };
+    } catch (err) {
+      logger.warn(
+        { err, packageName },
+        'Error fetching vulnerability information for package',
+      );
+      return null;
+    }
+  }
+
+  // https://ossf.github.io/osv-schema/#affectedrangesevents-fields
+  private sortEvents(
+    events: Osv.Event[],
+    versioningApi: VersioningApi,
+  ): Osv.Event[] {
+    const sortedCopy: Osv.Event[] = [];
+    let zeroEvent: Osv.Event | null = null;
+
+    for (const event of events) {
+      if (event.introduced === '0') {
+        zeroEvent = event;
+      } else if (versioningApi.isVersion(Object.values(event)[0])) {
+        sortedCopy.push(event);
+      } else {
+        logger.debug({ event }, 'Skipping OSV event with invalid version');
+      }
+    }
+
+    sortedCopy.sort((a, b) =>
+      // no pre-processing, as there are only very few values to sort
+      versioningApi.sortVersions(Object.values(a)[0], Object.values(b)[0]),
+    );
+
+    if (zeroEvent) {
+      sortedCopy.unshift(zeroEvent);
+    }
+
+    return sortedCopy;
+  }
+
+  private isPackageAffected(
+    ecosystem: Ecosystem,
+    packageName: string,
+    affected: Osv.Affected,
+  ): boolean {
+    return (
+      affected.package?.name === packageName &&
+      affected.package?.ecosystem === ecosystem
+    );
+  }
+
+  private includedInVersions(
+    depVersion: string,
+    affected: Osv.Affected,
+  ): boolean {
+    return !!affected.versions?.includes(depVersion);
+  }
+
+  private includedInRanges(
+    depVersion: string,
+    affected: Osv.Affected,
+    versioningApi: VersioningApi,
+  ): boolean {
+    for (const range of affected.ranges ?? []) {
+      if (range.type === 'GIT') {
+        continue;
+      }
+
+      let vulnerable = false;
+      for (const event of this.sortEvents(range.events, versioningApi)) {
+        if (
+          is.nonEmptyString(event.introduced) &&
+          (event.introduced === '0' ||
+            this.isVersionGtOrEq(depVersion, event.introduced, versioningApi))
+        ) {
+          vulnerable = true;
+        } else if (
+          is.nonEmptyString(event.fixed) &&
+          this.isVersionGtOrEq(depVersion, event.fixed, versioningApi)
+        ) {
+          vulnerable = false;
+        } else if (
+          is.nonEmptyString(event.last_affected) &&
+          this.isVersionGt(depVersion, event.last_affected, versioningApi)
+        ) {
+          vulnerable = false;
+        }
+      }
+
+      if (vulnerable) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // https://ossf.github.io/osv-schema/#evaluation
+  private isPackageVulnerable(
+    ecosystem: Ecosystem,
+    packageName: string,
+    depVersion: string,
+    affected: Osv.Affected,
+    versioningApi: VersioningApi,
+  ): boolean {
+    return (
+      this.isPackageAffected(ecosystem, packageName, affected) &&
+      (this.includedInVersions(depVersion, affected) ||
+        this.includedInRanges(depVersion, affected, versioningApi))
+    );
+  }
+
+  private getFixedVersion(
+    ecosystem: Ecosystem,
+    depVersion: string,
+    affected: Osv.Affected,
+    versioningApi: VersioningApi,
+  ): string | null {
+    const fixedVersions: string[] = [];
+    const lastAffectedVersions: string[] = [];
+
+    for (const range of affected.ranges ?? []) {
+      if (range.type === 'GIT') {
+        continue;
+      }
+
+      for (const event of range.events) {
+        if (
+          is.nonEmptyString(event.fixed) &&
+          versioningApi.isVersion(event.fixed)
+        ) {
+          fixedVersions.push(event.fixed);
+        } else if (
+          is.nonEmptyString(event.last_affected) &&
+          versioningApi.isVersion(event.last_affected)
+        ) {
+          lastAffectedVersions.push(event.last_affected);
+        }
+      }
+    }
+
+    fixedVersions.sort((a, b) => versioningApi.sortVersions(a, b));
+    const fixedVersion = fixedVersions.find((version) =>
+      this.isVersionGt(version, depVersion, versioningApi),
+    );
+    if (fixedVersion) {
+      return this.getFixedVersionByEcosystem(fixedVersion, ecosystem);
+    }
+
+    lastAffectedVersions.sort((a, b) => versioningApi.sortVersions(a, b));
+    const lastAffected = lastAffectedVersions.find((version) =>
+      this.isVersionGtOrEq(version, depVersion, versioningApi),
+    );
+    if (lastAffected) {
+      return this.getLastAffectedByEcosystem(lastAffected, ecosystem);
+    }
+
+    return null;
+  }
+
+  private getFixedVersionByEcosystem(
+    fixedVersion: string,
+    ecosystem: Ecosystem,
+  ): string {
+    if (ecosystem === 'Maven' || ecosystem === 'NuGet') {
+      return `[${fixedVersion},)`;
+    }
+
+    // crates.io, Go, Hex, npm, RubyGems, PyPI
+    return `>= ${fixedVersion}`;
+  }
+
+  private getLastAffectedByEcosystem(
+    lastAffected: string,
+    ecosystem: Ecosystem,
+  ): string {
+    if (ecosystem === 'Maven') {
+      return `(${lastAffected},)`;
+    }
+
+    // crates.io, Go, Hex, npm, RubyGems, PyPI
+    return `> ${lastAffected}`;
+  }
+
+  private isVersionGt(
+    version: string,
+    other: string,
+    versioningApi: VersioningApi,
+  ): boolean {
+    return (
+      versioningApi.isVersion(version) &&
+      versioningApi.isVersion(other) &&
+      versioningApi.isGreaterThan(version, other)
+    );
+  }
+
+  private isVersionGtOrEq(
+    version: string,
+    other: string,
+    versioningApi: VersioningApi,
+  ): boolean {
+    return (
+      versioningApi.isVersion(version) &&
+      versioningApi.isVersion(other) &&
+      (versioningApi.equals(version, other) ||
+        versioningApi.isGreaterThan(version, other))
+    );
+  }
+
+  generatePrBodyNotes(
+    vulnerability: Osv.Vulnerability,
+    affected: Osv.Affected,
+    truncated: boolean,
+    isFirstVulnerability: boolean,
+  ): string[] {
+    let aliases = [vulnerability.id].concat(vulnerability.aliases ?? []).sort();
+    aliases = aliases.map((id) => {
+      if (id.startsWith('CVE-')) {
+        return `[${id}](https://nvd.nist.gov/vuln/detail/${id})`;
+      } else if (id.startsWith('GHSA-')) {
+        return `[${id}](https://github.com/advisories/${id})`;
+      } else if (id.startsWith('RUSTSEC-')) {
+        return `[${id}](https://rustsec.org/advisories/${id}.html)`;
+      } else if (id.startsWith('GO-')) {
+        return `[${id}](https://pkg.go.dev/vuln/${id})`;
+      }
+
+      return id;
+    });
+
+    let content = '\n\n---\n\n';
+
+    if (truncated && isFirstVulnerability) {
+      content += `> **Note:** Due to the number of vulnerabilities found, some details have been omitted from this description.\n\n`;
+    }
+
+    content += '### ';
+    content += vulnerability.summary ? `${vulnerability.summary}\n` : '';
+    content += `${aliases.join(' / ')}\n`;
+    content += `\n<details>\n<summary>More information</summary>\n`;
+
+    if (!truncated) {
+      const details = vulnerability.details?.replace(
+        regEx(/^#{1,4} /gm),
+        '##### ',
+      );
+      content += `#### Details\n${details ?? 'No details.'}\n\n`;
+    }
+
+    content += '#### Severity\n';
+    const severityDetails = this.extractSeverityDetails(
+      vulnerability,
+      affected,
+    );
+
+    if (severityDetails.cvssVector) {
+      content += `- CVSS Score: ${severityDetails.score}\n`;
+      content += `- Vector String: \`${severityDetails.cvssVector}\`\n`;
+    } else {
+      content += `${titleCase(severityDetails.severityLevel)}\n`;
+    }
+
+    content += `\n#### References\n${
+      vulnerability.references
+        ?.map((ref) => {
+          return `- [${ref.url}](${ref.url})`;
+        })
+        .join('\n') ?? 'No references.'
+    }`;
+
+    content += `</details>`;
+
+    return [sanitizeMarkdown(content)];
+  }
+
+  public extractSeverityDetails(
+    vulnerability: Osv.Vulnerability,
+    affected: Osv.Affected,
+  ): SeverityDetails {
+    let severityLevel = 'UNKNOWN';
+    let score = 'Unknown';
+
+    const cvssVector =
+      vulnerability.severity?.find((e) => e.type === 'CVSS_V4')?.score ??
+      vulnerability.severity?.find((e) => e.type === 'CVSS_V3')?.score ??
+      vulnerability.severity?.[0]?.score ??
+      (affected.database_specific?.cvss as string); // RUSTSEC
+
+    if (cvssVector) {
+      const [baseScore, severity] =
+        Vulnerabilities.evaluateCvssVector(cvssVector);
+      severityLevel = severity.toUpperCase();
+      score = baseScore
+        ? `${baseScore} / 10 (${titleCase(severityLevel)})`
+        : 'Unknown';
+    } else if (vulnerability.database_specific?.severity) {
+      const severity = vulnerability.database_specific.severity as string;
+      severityLevel = severity.toUpperCase();
+    }
+
+    return {
+      cvssVector,
+      score,
+      severityLevel,
+    };
+  }
+}

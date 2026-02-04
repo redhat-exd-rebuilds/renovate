@@ -49,6 +49,7 @@ import { ensureOnboardingPr } from './onboarding/pr/index.ts';
 import type { ExtractResult } from './process/extract-update.ts';
 import { extractDependencies, updateRepo } from './process/index.ts';
 import type { ProcessResult, RepositoryResult } from './result.ts';
+import { createRPMLockFileVulnerabilityBranches } from './process/rpm-vuln-branches.ts';
 import { processResult } from './result.ts';
 
 // istanbul ignore next
@@ -121,13 +122,18 @@ export async function renovateRepository(
       const extractResult = performExtract
         ? await extractDependencies(config)
         : emptyExtract();
-      addExtractionStats(config, extractResult);
+    addExtractionStats(config, extractResult);
 
-      const { branches, branchList, packageFiles } = extractResult;
+    const [branches, branchList] = createRPMLockFileVulnerabilityBranches(
+      extractResult.branches,
+      config,
+    );
+    const packageFiles = extractResult.packageFiles;
 
-      if (config.semanticCommits === 'auto') {
-        config.semanticCommits = await detectSemanticCommits();
-      }
+    if (config.semanticCommits === 'auto') {
+      config.semanticCommits = await detectSemanticCommits();
+    }
+
 
       if (
         GlobalConfig.get('dryRun') !== 'lookup' &&
