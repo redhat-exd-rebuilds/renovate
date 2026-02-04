@@ -18,6 +18,7 @@ import { coerceString } from '../../../../util/string.ts';
 import type { BranchConfig, BranchUpgradeConfig } from '../../../types.ts';
 import { normalizeDepNames } from '../../extract/manager-files.ts';
 import { doAutoReplace } from './auto-replace.ts';
+import { postProcessRPMs } from './rpm-post-processing.ts';
 
 export interface PackageFilesResult {
   artifactErrors: ArtifactError[];
@@ -425,21 +426,25 @@ export async function getUpdatedPackageFiles(
       sortPackageFiles(config, manager, packageFilesForManager);
       for (const packageFile of packageFilesForManager) {
         const updatedDeps = packageFileUpdatedDeps[packageFile.path];
-        const results = await managerUpdateArtifacts(manager, {
-          packageFileName: packageFile.path,
-          updatedDeps,
-          // TODO #22198
-          newPackageFileContent: packageFile.contents!.toString(),
-          newLockFileContent: getUpdatedLockFileContent(
+        const results = await managerUpdateArtifacts(
+          manager,
+          {
+            packageFileName: packageFile.path,
             updatedDeps,
-            updatedFileContents,
-          ),
-          config: patchConfigForArtifactsUpdate(
-            config,
-            manager,
-            packageFile.path,
-          ),
-        });
+            // TODO #22198
+            newPackageFileContent: packageFile.contents!.toString(),
+            newLockFileContent: getUpdatedLockFileContent(
+              updatedDeps,
+              updatedFileContents,
+            ),
+            config: patchConfigForArtifactsUpdate(
+              config,
+              manager,
+              packageFile.path,
+            ),
+          },
+          config,
+        );
         if (manager === 'mise') {
           const removedLockFiles = removeUnrefreshedLockfileOnlyChanges(
             updatedPackageFiles,
@@ -497,21 +502,25 @@ export async function getUpdatedPackageFiles(
       sortPackageFiles(config, manager, packageFilesForManager);
       for (const packageFile of packageFilesForManager) {
         const updatedDeps = packageFileUpdatedDeps[packageFile.path];
-        const results = await managerUpdateArtifacts(manager, {
-          packageFileName: packageFile.path,
-          updatedDeps,
-          // TODO #22198
-          newPackageFileContent: packageFile.contents!.toString(),
-          newLockFileContent: getUpdatedLockFileContent(
+        const results = await managerUpdateArtifacts(
+          manager,
+          {
+            packageFileName: packageFile.path,
             updatedDeps,
-            updatedFileContents,
-          ),
-          config: patchConfigForArtifactsUpdate(
-            config,
-            manager,
-            packageFile.path,
-          ),
-        });
+            // TODO #22198
+            newPackageFileContent: packageFile.contents!.toString(),
+            newLockFileContent: getUpdatedLockFileContent(
+              updatedDeps,
+              updatedFileContents,
+            ),
+            config: patchConfigForArtifactsUpdate(
+              config,
+              manager,
+              packageFile.path,
+            ),
+          },
+          config,
+        );
         processUpdateArtifactResults(
           results,
           updatedArtifacts,
@@ -554,16 +563,20 @@ export async function getUpdatedPackageFiles(
           const contents =
             updatedFileContents[packageFile.path] ||
             (await getFile(packageFile.path, config.baseBranch));
-          const results = await managerUpdateArtifacts(manager, {
-            packageFileName: packageFile.path,
-            updatedDeps: [],
-            newPackageFileContent: contents!,
-            config: patchConfigForArtifactsUpdate(
-              config,
-              manager,
-              packageFile.path,
-            ),
-          });
+          const results = await managerUpdateArtifacts(
+            manager,
+            {
+              packageFileName: packageFile.path,
+              updatedDeps: [],
+              newPackageFileContent: contents!,
+              config: patchConfigForArtifactsUpdate(
+                config,
+                manager,
+                packageFile.path,
+              ),
+            },
+            config,
+          );
           processUpdateArtifactResults(
             results,
             updatedArtifacts,
@@ -605,9 +618,10 @@ function patchConfigForArtifactsUpdate(
   return updatedConfig;
 }
 
-async function managerUpdateArtifacts(
+export async function managerUpdateArtifacts(
   manager: string,
   updateArtifact: UpdateArtifact,
+  config: BranchConfig,
 ): Promise<UpdateArtifactsResult[] | null> {
   const updateArtifacts = get(manager, 'updateArtifacts');
   if (!updateArtifacts) {
@@ -622,7 +636,12 @@ async function managerUpdateArtifacts(
     return null;
   }
 
-  return await updateArtifacts(updateArtifact);
+  const result = await updateArtifacts(updateArtifact);
+  if (manager === 'rpm-lockfile' && config.isLockFileMaintenance) {
+    return postProcessRPMs(result, config);
+  } else {
+    return result;
+  }
 }
 
 function processUpdateArtifactResults(

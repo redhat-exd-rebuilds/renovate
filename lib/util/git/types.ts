@@ -75,6 +75,11 @@ export interface FileAddition {
   contents: string | Buffer | null;
 
   /**
+   * Previous file contents
+   */
+  previousContents?: string | Buffer | null;
+
+  /**
    * The executable bit
    */
   isExecutable?: boolean;

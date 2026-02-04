@@ -3,6 +3,7 @@ import type {
   GroupConfig,
   LegacyAdminConfig,
   PostUpgradeTasks,
+  RPMVulnerabilityAutomerge,
   RenovateConfig,
   RenovateSharedConfig,
   UpdateType,
@@ -165,6 +166,7 @@ export interface BranchConfig
   extends BranchUpgradeConfig, LegacyAdminConfig, PlatformPrOptions {
   automergeComment?: string;
   automergedPreviously?: boolean;
+  rpmVulnerabilityAutomerge?: RPMVulnerabilityAutomerge;
   baseBranch: string;
   branchAutomergeFailureMessage?: string;
 
