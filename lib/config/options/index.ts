@@ -2725,6 +2725,14 @@ const options: Readonly<RenovateOptions>[] = [
     experimentalIssues: [20542],
   },
   {
+    name: 'containerVulnerabilityAlerts',
+    description: 'Enable vulnerability alerts for containers.',
+    type: 'boolean',
+    default: false,
+    experimental: true,
+    experimentalIssues: [20542],
+  },
+  {
     name: 'pruneBranchAfterAutomerge',
     scopes: sharedScopes,
     description: 'Set to `true` to enable branch pruning after automerging.',
