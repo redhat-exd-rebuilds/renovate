@@ -127,6 +127,7 @@ export async function writeUpdates(
   allBranches: BranchConfig[],
 ): Promise<WriteUpdateResult> {
   const branches = allBranches;
+
   logger.debug(
     `Processing ${branches.length} branch${
       branches.length === 1 ? '' : 'es'
@@ -204,6 +205,34 @@ export async function writeUpdates(
         },
       },
     );
+
+    // If corresponding vulnerability branch has any CVE fixes (prBodyNotes), change to impossible schedule.
+    // Every possible lockfile must be included in the vulnerability branch, otherwise normal
+    // branch will still be processed
+    if (
+      branch.manager === 'rpm-lockfile' &&
+      branch.isLockFileMaintenance &&
+      !branch.isVulnerabilityAlert
+    ) {
+      const vulnerabilityBranchName = `${branch.branchName}-vulnerability`;
+      const vulnerabilityBranches = branches.filter(
+        (b) => b.branchName === vulnerabilityBranchName,
+      );
+
+      if (vulnerabilityBranches.length > 0) {
+        const firstMatch = vulnerabilityBranches[0];
+        if (
+          firstMatch.upgrades.every(
+            (upgrade) => upgrade.prBodyNotes && upgrade.prBodyNotes.length > 0,
+          )
+        ) {
+          logger.debug(
+            `${branch.branchName} already has a corresponding security update, preventing branch processing`,
+          );
+          branch.schedule = ['* * 31 4 *'];
+        }
+      }
+    }
 
     if (res !== undefined) {
       return res;

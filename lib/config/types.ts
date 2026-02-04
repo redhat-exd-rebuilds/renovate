@@ -35,6 +35,12 @@ export type RepositoryCacheConfig = 'disabled' | 'enabled' | 'reset';
 export type RepositoryCacheType = 'local' | string;
 export type DryRunConfig = 'extract' | 'lookup' | 'full';
 export type RequiredConfig = 'required' | 'optional' | 'ignored';
+export type RPMVulnerabilityAutomerge =
+  | 'ALL'
+  | 'MEDIUM'
+  | 'HIGH'
+  | 'CRITICAL'
+  | null;
 
 export interface GroupConfig extends Record<string, unknown> {
   branchName?: string;
@@ -434,6 +440,8 @@ export interface RenovateConfig
   vulnerabilityAlerts?: RenovateSharedConfig;
   osvVulnerabilityAlerts?: boolean;
   containerVulnerabilityAlerts?: boolean;
+  rpmVulnerabilityAlerts?: boolean;
+  rpmVulnerabilityAutomerge?: RPMVulnerabilityAutomerge;
   vulnerabilitySeverity?: string;
   customManagers?: CustomManager[];
   customDatasources?: Record<string, CustomDatasourceConfig>;
