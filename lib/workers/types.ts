@@ -2,6 +2,7 @@ import type { Merge } from 'type-fest';
 import type {
   GroupConfig,
   LegacyAdminConfig,
+  RPMVulnerabilityAutomerge,
   RenovateConfig,
   RenovateSharedConfig,
   ValidationMessage,
@@ -160,6 +161,7 @@ export interface BranchConfig
   extends BranchUpgradeConfig, LegacyAdminConfig, PlatformPrOptions {
   automergeComment?: string;
   automergedPreviously?: boolean;
+  rpmVulnerabilityAutomerge?: RPMVulnerabilityAutomerge;
   baseBranch: string;
   branchAutomergeFailureMessage?: string;
 
