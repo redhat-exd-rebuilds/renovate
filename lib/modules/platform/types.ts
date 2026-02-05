@@ -103,6 +103,7 @@ export interface PlatformPrOptions {
   gitLabIgnoreApprovals?: boolean;
   usePlatformAutomerge?: boolean;
   forkModeDisallowMaintainerEdits?: boolean;
+  requireTestsForPlatformAutomerge?: boolean;
 }
 
 export interface CreatePRConfig {
@@ -269,7 +270,6 @@ export interface Platform {
     // TODO: can be undefined or null ? #22198
     context: string | null | undefined,
   ): Promise<BranchStatus | null>;
-  getBranchStatusCheckNames?(branchName: string): Promise<string[]>;
   ensureCommentRemoval(
     ensureCommentRemoval:
       | EnsureCommentRemovalConfigByTopic
