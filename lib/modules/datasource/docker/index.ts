@@ -1226,6 +1226,15 @@ export class DockerDatasource extends Datasource {
       if (isNonEmptyString(labels[imageUrlLabel])) {
         ret.homepage = labels[imageUrlLabel];
       }
+      if (registryHost === 'https://quay.io') {
+        const packageNameAbsolute = packageName
+          .split('/')
+          .slice(-1)
+          .join('/')
+          .replace(/^task-/, '');
+        ret.changelogUrl = `${ret.sourceUrl}/blob/main/task/${packageNameAbsolute}/CHANGELOG.md`;
+        ret.sourceDirectory = `task/${packageNameAbsolute}`;
+      }
     }
     return ret;
   }
