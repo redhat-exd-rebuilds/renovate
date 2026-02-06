@@ -22,7 +22,6 @@ import {
 } from '../../../../modules/platform/pr-body';
 import { scm } from '../../../../modules/platform/scm';
 import { ExternalHostError } from '../../../../types/errors/external-host-error';
-import { hasRelevantStatusChecks } from '../../../../util/ci-test-detection';
 import { getElapsedHours } from '../../../../util/date';
 import { stripEmojis } from '../../../../util/emoji';
 import { fingerprint } from '../../../../util/fingerprint';
@@ -46,51 +45,14 @@ import {
 } from './pr-fingerprint';
 import { tryReuseAutoclosedPr } from './pr-reuse';
 
-export async function getPlatformPrOptions(
+export function getPlatformPrOptions(
   config: RenovateConfig & PlatformPrOptions,
-): Promise<PlatformPrOptions> {
+): PlatformPrOptions {
   const usePlatformAutomerge = Boolean(
     config.automerge &&
       (config.automergeType === 'pr' || config.automergeType === 'branch') &&
       config.platformAutomerge,
   );
-
-  // Only enable platform automerge if tests exist (when required)
-  if (usePlatformAutomerge && config.requireTestsForPlatformAutomerge) {
-    if (platform.getBranchStatusCheckNames && config.branchName) {
-      try {
-        const checkNames = await platform.getBranchStatusCheckNames(
-          config.branchName,
-        );
-        if (!hasRelevantStatusChecks(checkNames)) {
-          logger.debug(
-            'requireTestsForPlatformAutomerge: No CI tests found - delaying platform automerge',
-          );
-          return {
-            autoApprove: !!config.autoApprove,
-            automergeStrategy: config.automergeStrategy,
-            azureWorkItemId: config.azureWorkItemId ?? 0,
-            bbAutoResolvePrTasks: !!config.bbAutoResolvePrTasks,
-            bbUseDefaultReviewers: !!config.bbUseDefaultReviewers,
-            gitLabIgnoreApprovals: !!config.gitLabIgnoreApprovals,
-            forkModeDisallowMaintainerEdits:
-              !!config.forkModeDisallowMaintainerEdits,
-            usePlatformAutomerge: false,
-          };
-        }
-        logger.debug(
-          'requireTestsForPlatformAutomerge: CI tests found - enabling platform automerge',
-        );
-      } catch (err) {
-        logger.debug({ err }, 'Error checking for test status checks');
-        // On error, proceed with platform automerge anyway
-      }
-    } else {
-      logger.debug(
-        'Platform does not support getBranchStatusCheckNames - enabling platform automerge',
-      );
-    }
-  }
 
   return {
     autoApprove: !!config.autoApprove,
@@ -101,6 +63,7 @@ export async function getPlatformPrOptions(
     gitLabIgnoreApprovals: !!config.gitLabIgnoreApprovals,
     forkModeDisallowMaintainerEdits: !!config.forkModeDisallowMaintainerEdits,
     usePlatformAutomerge,
+    requireTestsForPlatformAutomerge: !!config.requireTestsForPlatformAutomerge,
   };
 }
 
@@ -469,7 +432,7 @@ export async function ensurePr(
         number: existingPr.number,
         prTitle,
         prBody,
-        platformPrOptions: await getPlatformPrOptions(config),
+        platformPrOptions: getPlatformPrOptions(config),
       };
       // PR must need updating
       if (existingPr?.targetBranch !== config.baseBranch) {
@@ -573,7 +536,7 @@ export async function ensurePr(
           prTitle,
           prBody,
           labels: prepareLabels(config),
-          platformPrOptions: await getPlatformPrOptions(config),
+          platformPrOptions: getPlatformPrOptions(config),
           draftPR: !!config.draftPR,
           milestone: config.milestone,
         });
