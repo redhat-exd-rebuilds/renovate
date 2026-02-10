@@ -699,10 +699,25 @@ export async function lookupUpdates(
             );
           }
 
-          update.newDigest ??= (await getDigest(
-            getDigestConfig,
-            update.newValue,
-          ))!;
+          try {
+            update.newDigest ??= (await getDigest(
+              getDigestConfig,
+              update.newValue,
+            ))!;
+          } catch (QuayIOAuthError) {
+            update.newDigest = null!;
+
+            logger.debug(
+              {
+                packageName: config.packageName,
+                currentValue: config.currentValue,
+                datasource: config.datasource,
+                newValue: update.newValue,
+                bucket: update.bucket,
+              },
+              'Caught QuayIOAuthError, update.newDigest should be null, but not cached',
+            );
+          }
 
           if (update.newDigest === undefined || update.newDigest === null) {
             logger.debug(
