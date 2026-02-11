@@ -43,6 +43,7 @@ import {
   addReplacementUpdateIfValid,
   isReplacementRulesConfigured,
 } from './utils';
+import { QuayIOAuthError } from '../../../../types/errors/quay-io-auth-error';
 
 async function getTimestamp(
   config: LookupUpdateConfig,
@@ -704,19 +705,23 @@ export async function lookupUpdates(
               getDigestConfig,
               update.newValue,
             ))!;
-          } catch (QuayIOAuthError) {
-            update.newDigest = null!;
+          } catch (error) {
+            if (error instanceof QuayIOAuthError) {
+              update.newDigest = null!;
 
-            logger.debug(
-              {
-                packageName: config.packageName,
-                currentValue: config.currentValue,
-                datasource: config.datasource,
-                newValue: update.newValue,
-                bucket: update.bucket,
-              },
-              'Caught QuayIOAuthError, update.newDigest should be null, but not cached',
-            );
+              logger.debug(
+                {
+                  packageName: config.packageName,
+                  currentValue: config.currentValue,
+                  datasource: config.datasource,
+                  newValue: update.newValue,
+                  bucket: update.bucket,
+                },
+                'Caught QuayIOAuthError, update.newDigest should be null, but not cached',
+              );
+            } else {
+              throw error;
+            }
           }
 
           if (update.newDigest === undefined || update.newDigest === null) {
