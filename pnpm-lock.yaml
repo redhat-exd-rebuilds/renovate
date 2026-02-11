@@ -12,6 +12,11 @@ overrides:
   protobufjs@8.0.1: 8.2.0
   vite: 8.0.12
 
+patchedDependencies:
+  '@semantic-release/github':
+    hash: 1a126c0d79b7cf94ddfbd967515194897c6acb203beb85b921911420d3ba9103
+    path: patches/@semantic-release__github.patch
+
 importers:
 
   .:
