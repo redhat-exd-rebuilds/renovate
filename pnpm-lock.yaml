@@ -14,7 +14,7 @@ overrides:
 
 patchedDependencies:
   '@semantic-release/github':
-    hash: 4ec7a23b0ea41bc0b831ff1cb4952e95309f4fba5d71182ddea1f885d9838075
+    hash: 52441cf894b1a1cbce4fd26db025093959005c4d686a31e1b26ef01b53c2c288
     path: patches/@semantic-release__github.patch
 
 importers:
