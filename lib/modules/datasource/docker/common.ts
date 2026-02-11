@@ -6,6 +6,7 @@ import {
 } from '../../../constants/error-messages.ts';
 import { logger } from '../../../logger/index.ts';
 import { ExternalHostError } from '../../../types/errors/external-host-error.ts';
+import { QuayIOAuthError } from '../../../types/errors/quay-io-auth-error.ts';
 import type { HostRule } from '../../../types/index.ts';
 import { coerceArray } from '../../../util/array.ts';
 import { detectPlatform } from '../../../util/common.ts';
@@ -217,7 +218,11 @@ export async function getAuthHeaders(
     /* v8 ignore if */
     if (err.host === 'quay.io') {
       // TODO: debug why quay throws errors (#9604)
-      return null;
+      logger.debug(
+        { err, registryHost, dockerRepository },
+        'quay.io getAuthHeaders error',
+      );
+      throw new QuayIOAuthError('quay.io getAuthHeaders error');
     }
     /* v8 ignore if */
     if (err.statusCode === 401) {
