@@ -24,6 +24,7 @@ import { getRangeStrategy } from '../../../../modules/manager/index.ts';
 import { id as dockerVersioningId } from '../../../../modules/versioning/docker/index.ts';
 import * as allVersioning from '../../../../modules/versioning/index.ts';
 import { ExternalHostError } from '../../../../types/errors/external-host-error.ts';
+import { QuayIOAuthError } from '../../../../types/errors/quay-io-auth-error.ts';
 import { assignKeys } from '../../../../util/assign-keys.ts';
 import { getElapsedDays } from '../../../../util/date.ts';
 import { applyPackageRules } from '../../../../util/package-rules/index.ts';
@@ -701,10 +702,29 @@ export async function lookupUpdates(
             )?.newDigest;
           }
 
-          update.newDigest ??= await getDigest(
-            getDigestConfig,
-            update.newValue,
-          );
+          try {
+            update.newDigest ??=
+              dependency?.releases.find((r) => r.version === update.newValue)
+                ?.newDigest ??
+              (await getDigest(getDigestConfig, update.newValue))!;
+          } catch (error) {
+            if (error instanceof QuayIOAuthError) {
+              update.newDigest = null!;
+
+              logger.debug(
+                {
+                  packageName: config.packageName,
+                  currentValue: config.currentValue,
+                  datasource: config.datasource,
+                  newValue: update.newValue,
+                  bucket: update.bucket,
+                },
+                'Caught QuayIOAuthError, update.newDigest should be null, but not cached',
+              );
+            } else {
+              throw error;
+            }
+          }
 
           // If the digest could not be determined, report this as otherwise the
           // update will be omitted later on without notice.

@@ -3,6 +3,7 @@ import { GlobalConfig } from '../../../config/global.ts';
 import { PAGE_NOT_FOUND_ERROR } from '../../../constants/error-messages.ts';
 import { logger } from '../../../logger/index.ts';
 import { ExternalHostError } from '../../../types/errors/external-host-error.ts';
+import { QuayIOAuthError } from '../../../types/errors/quay-io-auth-error.ts';
 import { withCache } from '../../../util/cache/package/with-cache.ts';
 import { getEnv } from '../../../util/env.ts';
 import { memCacheProvider } from '../../../util/http/cache/memory-http-cache-provider.ts';
@@ -129,6 +130,9 @@ export class DockerDatasource extends Datasource {
       });
       return manifestResponse;
     } catch (err) /* istanbul ignore next */ {
+      if (err instanceof QuayIOAuthError) {
+        throw err;
+      }
       if (err instanceof ExternalHostError) {
         throw err;
       }
@@ -1062,6 +1066,9 @@ export class DockerDatasource extends Datasource {
         logger.debug(`Got docker digest ${digest!}`);
       }
     } catch (err) /* istanbul ignore next */ {
+      if (err instanceof QuayIOAuthError) {
+        throw err;
+      }
       if (err instanceof ExternalHostError) {
         throw err;
       }
