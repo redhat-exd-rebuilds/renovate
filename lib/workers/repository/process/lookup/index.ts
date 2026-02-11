@@ -24,6 +24,7 @@ import { getRangeStrategy } from '../../../../modules/manager';
 import * as allVersioning from '../../../../modules/versioning';
 import { id as dockerVersioningId } from '../../../../modules/versioning/docker';
 import { ExternalHostError } from '../../../../types/errors/external-host-error';
+import { QuayIOAuthError } from '../../../../types/errors/quay-io-auth-error';
 import { assignKeys } from '../../../../util/assign-keys';
 import { getElapsedDays } from '../../../../util/date';
 import { applyPackageRules } from '../../../../util/package-rules';
@@ -699,10 +700,29 @@ export async function lookupUpdates(
             );
           }
 
-          update.newDigest ??= (await getDigest(
-            getDigestConfig,
-            update.newValue,
-          ))!;
+          try {
+            update.newDigest ??= (await getDigest(
+              getDigestConfig,
+              update.newValue,
+            ))!;
+          } catch (error) {
+            if (error instanceof QuayIOAuthError) {
+              update.newDigest = null!;
+
+              logger.debug(
+                {
+                  packageName: config.packageName,
+                  currentValue: config.currentValue,
+                  datasource: config.datasource,
+                  newValue: update.newValue,
+                  bucket: update.bucket,
+                },
+                'Caught QuayIOAuthError, update.newDigest should be null, but not cached',
+              );
+            } else {
+              throw error;
+            }
+          }
 
           if (update.newDigest === undefined || update.newDigest === null) {
             logger.debug(

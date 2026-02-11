@@ -7,6 +7,7 @@ import {
 import { logger } from '../../../logger';
 import type { HostRule } from '../../../types';
 import { ExternalHostError } from '../../../types/errors/external-host-error';
+import { QuayIOAuthError } from '../../../types/errors/quay-io-auth-error';
 import { coerceArray } from '../../../util/array';
 import { detectPlatform } from '../../../util/common';
 import { parseGitUrl } from '../../../util/git/url';
@@ -221,7 +222,7 @@ export async function getAuthHeaders(
         { err, registryHost, dockerRepository },
         'quay.io getAuthHeaders error',
       );
-      return null;
+      throw new QuayIOAuthError('quay.io getAuthHeaders error');
     }
     /* v8 ignore if */
     if (err.statusCode === 401) {
