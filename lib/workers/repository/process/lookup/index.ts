@@ -24,6 +24,7 @@ import { getRangeStrategy } from '../../../../modules/manager';
 import * as allVersioning from '../../../../modules/versioning';
 import { id as dockerVersioningId } from '../../../../modules/versioning/docker';
 import { ExternalHostError } from '../../../../types/errors/external-host-error';
+import { QuayIOAuthError } from '../../../../types/errors/quay-io-auth-error';
 import { assignKeys } from '../../../../util/assign-keys';
 import { getElapsedDays } from '../../../../util/date';
 import { applyPackageRules } from '../../../../util/package-rules';
@@ -43,7 +44,6 @@ import {
   addReplacementUpdateIfValid,
   isReplacementRulesConfigured,
 } from './utils';
-import { QuayIOAuthError } from '../../../../types/errors/quay-io-auth-error';
 
 async function getTimestamp(
   config: LookupUpdateConfig,

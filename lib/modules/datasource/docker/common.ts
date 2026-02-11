@@ -7,6 +7,7 @@ import {
 import { logger } from '../../../logger';
 import type { HostRule } from '../../../types';
 import { ExternalHostError } from '../../../types/errors/external-host-error';
+import { QuayIOAuthError } from '../../../types/errors/quay-io-auth-error';
 import { coerceArray } from '../../../util/array';
 import { detectPlatform } from '../../../util/common';
 import { parseGitUrl } from '../../../util/git/url';
@@ -32,7 +33,6 @@ import { ecrRegex, getECRAuthToken } from './ecr';
 import { googleRegex } from './google';
 import type { OciHelmConfig } from './schema';
 import type { RegistryRepository } from './types';
-import { QuayIOAuthError } from '../../../types/errors/quay-io-auth-error';
 
 export const dockerDatasourceId = 'docker';
 
