@@ -131,28 +131,6 @@ export class DockerDatasource extends Datasource {
         cacheProvider: memCacheProvider,
       });
 
-      if (manifestResponse) {
-        logger.debug(
-          {
-            registryHost,
-            dockerRepository,
-            tag,
-            mode,
-            headers: manifestResponse.headers,
-          },
-          'Got manifest response from getManifestResponse() call.',
-        );
-      } else {
-        logger.debug(
-          {
-            registryHost,
-            dockerRepository,
-            tag,
-            mode,
-          },
-          'this.http[mode] returned null?',
-        );
-      }
       return manifestResponse;
     } catch (err) /* istanbul ignore next */ {
       if (err instanceof QuayIOAuthError) {
@@ -933,15 +911,6 @@ export class DockerDatasource extends Datasource {
         );
       }
 
-      logger.debug(
-        {
-          registryHost,
-          dockerRepository,
-          currentDigest,
-        },
-        `getImageArchitecture returned ${architecture === '' ? 'EMPTY STRING' : (architecture ?? 'null')}`,
-      );
-
       let manifestResponse: HttpResponse | null = null;
       if (!architecture) {
         manifestResponse = await this.getManifestResponse(
@@ -951,15 +920,6 @@ export class DockerDatasource extends Datasource {
           'head',
         );
 
-        logger.debug(
-          {
-            registryHost,
-            dockerRepository,
-            newTag,
-          },
-          `Does manifestResponse have docker-content-digest? ${manifestResponse && hasKey('docker-content-digest', manifestResponse.headers)}`,
-        );
-
         if (
           manifestResponse &&
           hasKey('docker-content-digest', manifestResponse.headers)
@@ -967,20 +927,8 @@ export class DockerDatasource extends Datasource {
           digest =
             (manifestResponse.headers['docker-content-digest'] as string) ||
             null;
-
-          if (digest === null) {
-            logger.debug(
-              { registryHost, dockerRepository, newTag, packageName },
-              `No digest found in manifest response headers for package ${packageName} in getDigest() call.`,
-            );
-          }
         }
       }
-
-      logger.debug(
-        { registryHost, dockerRepository },
-        `Architecture checks: isNonEmptyString? ${isNonEmptyString(architecture)}, doesn't have docker-content-digest? ${manifestResponse && !hasKey('docker-content-digest', manifestResponse.headers)}`,
-      );
 
       if (
         isNonEmptyString(architecture) ||
