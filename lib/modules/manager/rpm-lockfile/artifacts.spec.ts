@@ -50,9 +50,7 @@ describe('modules/manager/rpm-lockfile/artifacts', () => {
       ).toBeNull();
 
       expect(execSnapshots).toMatchObject([
-        {
-          cmd: 'caching-rpm-lockfile-prototype rpms.in.yaml --outfile rpms.lock.yaml',
-        },
+        { cmd: 'rpm-lockfile-prototype rpms.in.yaml --outfile rpms.lock.yaml' },
       ]);
     });
 
@@ -84,9 +82,7 @@ describe('modules/manager/rpm-lockfile/artifacts', () => {
       ]);
 
       expect(execSnapshots).toMatchObject([
-        {
-          cmd: 'caching-rpm-lockfile-prototype rpms.in.yaml --outfile rpms.lock.yaml',
-        },
+        { cmd: 'rpm-lockfile-prototype rpms.in.yaml --outfile rpms.lock.yaml' },
       ]);
     });
 
@@ -118,9 +114,7 @@ describe('modules/manager/rpm-lockfile/artifacts', () => {
       ]);
 
       expect(execSnapshots).toMatchObject([
-        {
-          cmd: 'caching-rpm-lockfile-prototype rpms.in.yaml --outfile rpms.lock.yaml',
-        },
+        { cmd: 'rpm-lockfile-prototype rpms.in.yaml --outfile rpms.lock.yaml' },
       ]);
     });
   });
