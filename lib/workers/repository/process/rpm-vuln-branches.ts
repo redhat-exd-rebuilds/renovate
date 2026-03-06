@@ -45,6 +45,18 @@ export function createRPMLockFileVulnerabilityBranches(
       upgrade.vulnerabilityFixStrategy = 'lowest';
     }
 
+    if (
+      copiedBranch.upgrades.length === 1 &&
+      copiedBranch.upgrades[0].manager === 'rpm-lockfile'
+    ) {
+      // There is only one update to RPM lockfile,
+      // so the config stays the same and the PR will be title 'Refresh RPM lockfiles'
+    } else {
+      // There is more than one lockfile update in the repo,
+      // so to make it less confusing, we choose the original PR title for lock file updates
+      copiedBranch.prTitle = 'Lock file maintenance [SECURITY]';
+    }
+
     // Add the vulnerability branch BEFORE the original branch
     const originalBranchIndex = resultBranches.findIndex(
       (resultBranch) => resultBranch.branchName === branch.branchName,

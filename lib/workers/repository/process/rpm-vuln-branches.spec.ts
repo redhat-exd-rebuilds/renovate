@@ -173,6 +173,57 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
     expect(vulnBranch.rpmVulnerabilityAutomerge).toBe('HIGH');
   });
 
+  it('keeps original prTitle when there is a single rpm-lockfile upgrade', () => {
+    const config: RenovateConfig = { rpmVulnerabilityAlerts: true } as any;
+    const branches = [baseBranch];
+
+    const [resultBranches] = createRPMLockFileVulnerabilityBranches(
+      branches,
+      config,
+    );
+
+    const vulnBranch = resultBranches[0];
+    expect(vulnBranch.prTitle).toBe(
+      'chore: rpm lockfile maintenance [SECURITY]',
+    );
+  });
+
+  it('overrides prTitle when there are multiple upgrades', () => {
+    const config: RenovateConfig = { rpmVulnerabilityAlerts: true } as any;
+    const multiUpgradeBranch: BranchConfig = {
+      ...baseBranch,
+      upgrades: [
+        {
+          branchName: 'rpm-lockfile-maintenance',
+          branchTopic: 'topic',
+          manager: 'rpm-lockfile',
+          schedule: ['after 1am'],
+          commitMessageSuffix: '',
+          isVulnerabilityAlert: false,
+          vulnerabilityFixStrategy: undefined,
+        },
+        {
+          branchName: 'rpm-lockfile-maintenance',
+          branchTopic: 'topic',
+          manager: 'npm',
+          schedule: ['after 1am'],
+          commitMessageSuffix: '',
+          isVulnerabilityAlert: false,
+          vulnerabilityFixStrategy: undefined,
+        },
+      ],
+    };
+    const branches = [multiUpgradeBranch];
+
+    const [resultBranches] = createRPMLockFileVulnerabilityBranches(
+      branches,
+      config,
+    );
+
+    const vulnBranch = resultBranches[0];
+    expect(vulnBranch.prTitle).toBe('Lock file maintenance [SECURITY]');
+  });
+
   it('sets rpmVulnerabilityAutomerge to undefined when config is undefined', () => {
     const config: RenovateConfig = {
       rpmVulnerabilityAlerts: true,
