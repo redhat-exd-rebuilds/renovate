@@ -5,6 +5,7 @@ import {
 } from '../../../constants/error-messages.ts';
 import { logger } from '../../../logger/index.ts';
 import { ExternalHostError } from '../../../types/errors/external-host-error.ts';
+import type { HostRule } from '../../../types/index.ts';
 import { coerceArray } from '../../../util/array.ts';
 import { detectPlatform } from '../../../util/common.ts';
 import { parseGitUrl } from '../../../util/git/url.ts';
@@ -99,11 +100,24 @@ export async function getAuthHeaders(
       return null;
     }
 
-    const rule = hostRules.find({
+    let opts: HttpOptions = hostRules.find({
       hostType: dockerDatasourceId,
       url: apiCheckUrl,
     });
-    const opts: HttpOptions = {};
+
+    // If no credentials found with the API URL, try the repository path URL.
+    // This supports per-repo matchHost like "quay.io/org/repo" where the
+    // matchHost path doesn't match Docker v2 API URLs (e.g. /v2/...).
+    if (!opts.username && !opts.password && !opts.token) {
+      const repoUrl = `${registryHost}/${dockerRepository}`;
+      const repoOpts = hostRules.find({
+        hostType: dockerDatasourceId,
+        url: repoUrl,
+      });
+      if (repoOpts.username || repoOpts.password || repoOpts.token) {
+        opts = { ...opts, ...repoOpts };
+      }
+    }
 
     if (ecrRegex.test(registryHost)) {
       logger.once.debug(`hostRules: ecr auth for ${registryHost}`);
@@ -112,15 +126,15 @@ export async function getAuthHeaders(
         `Using ecr auth for Docker registry`,
       );
       const [, region] = coerceArray(ecrRegex.exec(registryHost));
-      const auth = await getECRAuthToken(region, rule);
+      const auth = await getECRAuthToken(region, opts as HostRule);
       if (auth) {
         opts.headers = { authorization: `Basic ${auth}` };
       }
     } else if (
       googleRegex.test(registryHost) &&
-      typeof rule.username === 'undefined' &&
-      typeof rule.password === 'undefined' &&
-      typeof rule.token === 'undefined'
+      typeof opts.username === 'undefined' &&
+      typeof opts.password === 'undefined' &&
+      typeof opts.token === 'undefined'
     ) {
       logger.once.debug(`hostRules: google auth for ${registryHost}`);
       logger.trace(
@@ -136,18 +150,18 @@ export async function getAuthHeaders(
           'Could not get Google access token, using no auth',
         );
       }
-    } else if (rule.username && rule.password) {
+    } else if (opts.username && opts.password) {
       logger.once.debug(`hostRules: basic auth for ${registryHost}`);
       logger.trace(
         { registryHost, dockerRepository },
         `Using basic auth for Docker registry`,
       );
-      const auth = Buffer.from(`${rule.username}:${rule.password}`).toString(
+      const auth = Buffer.from(`${opts.username}:${opts.password}`).toString(
         'base64',
       );
       opts.headers = { authorization: `Basic ${auth}` };
-    } else if (rule.token) {
-      const authType = rule.authType ?? 'Bearer';
+    } else if (opts.token) {
+      const authType = (opts as HostRule).authType ?? 'Bearer';
       logger.once.debug(
         `hostRules: ${authType} token auth for ${registryHost}`,
       );
@@ -155,7 +169,7 @@ export async function getAuthHeaders(
         { registryHost, dockerRepository },
         `Using ${authType} token for Docker registry`,
       );
-      opts.headers = { authorization: `${authType} ${rule.token}` };
+      opts.headers = { authorization: `${authType} ${opts.token}` };
     }
 
     const challenges = parse(apiCheckResponse.headers['www-authenticate']);
