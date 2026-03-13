@@ -92,7 +92,22 @@ export async function getAuthHeaders(
       hostType: dockerDatasourceId,
       url: apiCheckUrl,
     });
-    const opts: HttpOptions = {};
+    let opts: HttpOptions = {};
+
+
+    // If no credentials found with the API URL, try the repository path URL.
+    // This supports per-repo matchHost like "quay.io/org/repo" where the
+    // matchHost path doesn't match Docker v2 API URLs (e.g. /v2/...).
+    if (!rule.username && !rule.password && !rule.token) {
+      const repoUrl = `${registryHost}/${dockerRepository}`;
+      const repoOpts = hostRules.find({
+        hostType: dockerDatasourceId,
+        url: repoUrl,
+      });
+      if (repoOpts.username || repoOpts.password || repoOpts.token) {
+        opts = { ...opts, ...repoOpts };
+      }
+    }
 
     if (ecrRegex.test(registryHost)) {
       logger.once.debug(`hostRules: ecr auth for ${registryHost}`);
