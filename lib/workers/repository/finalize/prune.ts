@@ -167,22 +167,30 @@ export async function pruneStaleBranches(
 
   if (config.parallelRunPruneStaleBranches) {
     logger.debug('Filtering stale branches to only belong to the base branch');
-    const baseBranch = branchList?.[0]?.split('/')[2] ?? null;
-    if (typeof baseBranch === 'string') {
-      renovateBranches = renovateBranches.filter((branchName) => {
-        try {
-          const parts = branchName.split('/');
-          if (parts.length >= 3) {
-            const branchBaseName = parts[2];
-            return branchBaseName === baseBranch;
-          }
-          return true;
-        } catch {
-          // If unable to parse, keep it
-          return true;
-        }
-      });
+
+    let baseBranch = '';
+    if (config.baseBranches && config.baseBranches.length > 0) {
+      // for parallel run, baseBranches is set (through baseBranchPatterns)
+      // and it should only contain a single base branch
+      baseBranch = config.baseBranches[0];
+    } else {
+      // if no base branches are configured, use the first branch
+      // in the branch list, split by '/' and use the third segment
+      // as the base branch (following default pattern for MintMaker:
+      // "konflux/mintmaker/base-branch/..." or "konflux/references/base-branch")
+      baseBranch = branchList?.[0]?.split('/')[2] ?? '';
     }
+
+    if (!baseBranch) {
+      logger.debug('No base branch found for this run - skipping pruning');
+      return;
+    }
+
+    logger.debug(`Base branch for pruning: ${baseBranch}`);
+
+    renovateBranches = renovateBranches.filter((branchName) =>
+      branchName.split('/').includes(baseBranch),
+    );
   }
 
   logger.debug(
