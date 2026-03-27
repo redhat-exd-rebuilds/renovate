@@ -188,9 +188,16 @@ export async function pruneStaleBranches(
 
     logger.debug(`Base branch for pruning: ${baseBranch}`);
 
-    renovateBranches = renovateBranches.filter((branchName) =>
-      branchName.split('/').includes(baseBranch),
-    );
+    // look for a segment of branch name matching the base branch or the base branch duplicated
+    // this duplication happens when branchTopic is set to the base branch and at the same time
+    // the baseBranchPatterns includes more than one branch
+    const baseBranchDuplicated = `${baseBranch}-${baseBranch}`;
+    renovateBranches = renovateBranches.filter((branchName) => {
+      const segments = branchName.split('/');
+      return segments.some(
+        (segment) => segment === baseBranch || segment === baseBranchDuplicated,
+      );
+    });
   }
 
   logger.debug(
