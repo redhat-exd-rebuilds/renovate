@@ -345,5 +345,36 @@ describe('workers/repository/finalize/prune', () => {
       );
       expect(scm.deleteBranch).toHaveBeenCalledExactlyOnceWith(stale);
     });
+
+    it('with parallelRunPruneStaleBranches prunes branch with duplicated base segment', async () => {
+      config.parallelRunPruneStaleBranches = true;
+      config.baseBranches = ['main'];
+      config.defaultBranch = 'main';
+      config.branchPrefix = 'konflux/mintmaker/';
+      config.branchList = [];
+      const duplicatedBaseBranch = 'konflux/mintmaker/main-main/dep-1.x';
+      const otherBaseBranch = 'konflux/mintmaker/release-release/dep-1.x';
+      git.getBranchList.mockReturnValueOnce([
+        duplicatedBaseBranch,
+        otherBaseBranch,
+      ]);
+      platform.findPr.mockResolvedValueOnce(partial<Pr>({ title: 'main PR' }));
+      scm.isBranchModified.mockResolvedValueOnce(false);
+
+      await cleanup.pruneStaleBranches(config, config.branchList);
+
+      expect(platform.findPr).toHaveBeenCalledTimes(1);
+      expect(platform.findPr).toHaveBeenCalledWith(
+        expect.objectContaining({
+          branchName: duplicatedBaseBranch,
+          state: 'open',
+          targetBranch: 'main',
+        }),
+      );
+      expect(scm.deleteBranch).toHaveBeenCalledExactlyOnceWith(
+        duplicatedBaseBranch,
+      );
+      expect(platform.updatePr).toHaveBeenCalledTimes(1);
+    });
   });
 });
