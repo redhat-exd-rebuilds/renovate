@@ -162,7 +162,17 @@ export async function postUpgradeCommandsExecutor(
               ),
 
               cwd: workingDir,
-              extraEnv: getGitEnvironmentVariables(),
+              extraEnv: {
+                ...getGitEnvironmentVariables(),
+                ...(compiledCmd.startsWith('refresh-rpm-lockfiles') && {
+                  DNF_VAR_SSL_CLIENT_KEY: process.env.DNF_VAR_SSL_CLIENT_KEY,
+                  DNF_VAR_SSL_CLIENT_CERT: process.env.DNF_VAR_SSL_CLIENT_CERT,
+                  DNF_VAR_SSL_AUTH_CLIENT_KEY:
+                    process.env.DNF_VAR_SSL_AUTH_CLIENT_KEY,
+                  DNF_VAR_SSL_AUTH_CLIENT_CERT:
+                    process.env.DNF_VAR_SSL_AUTH_CLIENT_CERT,
+                }),
+              },
             };
             if (dataFilePath) {
               execOpts.env = {
