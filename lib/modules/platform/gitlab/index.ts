@@ -658,6 +658,7 @@ async function tryPrAutomerge(
           { version: defaults.version },
           'Merge trains require GitLab 17.11.0 or later, falling back to /merge endpoint',
         );
+      }
       if (platformPrOptions.requireTestsForPlatformAutomerge && !testsPresent) {
         logger.debug(
           'requireTestsForPlatformAutomerge is enabled and tests are not present, skipping automerge',

@@ -1,6 +1,6 @@
 // TODO #22198
-import type { Ecosystem, Osv } from '@renovatebot/osv-offline';
-import { OsvOffline } from '@renovatebot/osv-offline';
+import type { Ecosystem, Osv } from '@mintmaker/osv-offline';
+import { OsvOffline } from '@mintmaker/osv-offline';
 import {
   isEmptyArray,
   isNonEmptyString,
