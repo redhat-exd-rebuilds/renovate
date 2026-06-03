@@ -1,5 +1,5 @@
 import is from '@sindresorhus/is';
-import { createClient, createCluster } from 'redis';
+import { createClient, createCluster } from '@redis/client';
 import { GlobalConfig } from '../../../../config/global.ts';
 import { logger } from '../../../../logger/index.ts';
 import { outputCacheFile } from '../../../fs/index.ts';
