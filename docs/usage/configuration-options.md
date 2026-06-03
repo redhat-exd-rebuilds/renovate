@@ -990,6 +990,17 @@ For example, to use a SemVer-style versioning scheme when defining the `rubygems
 }
 ```
 
+## `containerVulnerabilityAlerts`
+
+!!! warning
+    This is an experimental feature.
+
+Set `containerVulnerabilityAlerts` to `true` to enable vulnerability alerts specifically for container images.
+
+When enabled, Renovate will check container dependencies for known vulnerabilities and create pull requests to update to fixed versions when available.
+
+This feature is separate from the general `osvVulnerabilityAlerts` option and focuses on container-specific vulnerability scanning.
+
 ## `customDatasources`
 
 Use `customDatasources` to fetch releases from APIs or statically hosted sites and Renovate has no own datasource.
@@ -3981,6 +3992,15 @@ The `sourceUrl` field supports template compilation, allowing you to dynamically
 
 In the example above, a package name like `hashicorp/aws` will be transformed to `https://github.com/hashicorp/terraform-provider-aws`.
 
+## `parallelRunPruneStaleBranches`
+
+Set to `true` to enable an alternative approach to pruning stale branches.
+
+In this approach, Renovate will only prune stale branches belonging to the one base branch it is renovating.
+The `pruneStaleBranches` option must be enabled for this to have any effect.
+
+This is useful when running Renovate in parallel across multiple base branches, as it prevents Renovate from pruning branches from other base branches that it's not currently processing.
+
 ## `patch`
 
 Add to this object if you wish to define rules that apply only to patch updates.
@@ -4672,6 +4692,39 @@ Renovate's "rollback" feature exists to propose a downgrade to the next-highest 
 
 Renovate does not create these rollback PRs by default, so this functionality needs to be opted-into.
 We recommend you do this selectively with `packageRules` and not globally.
+
+## `rpmVulnerabilityAlerts`
+
+!!! warning
+    This is an experimental feature.
+
+Set `rpmVulnerabilityAlerts` to `true` to enable vulnerability alerts for RPM packages.
+
+When enabled, Renovate will check RPM dependencies for known vulnerabilities and create pull requests to update to fixed versions when available.
+
+## `rpmVulnerabilityAutomerge`
+
+!!! warning
+    This is an experimental feature.
+
+Set at what criticality level should RPM vulnerability PRs be automerged.
+
+Allowed values:
+- `'ALL'`: Automerge all RPM vulnerability updates
+- `'MEDIUM'`: Automerge RPM vulnerabilities with medium severity or higher
+- `'HIGH'`: Automerge RPM vulnerabilities with high severity or higher
+- `'CRITICAL'`: Automerge only critical RPM vulnerabilities
+
+Set to `null` (default) to disable automerging of RPM vulnerability PRs.
+
+Example:
+
+```json
+{
+  "rpmVulnerabilityAlerts": true,
+  "rpmVulnerabilityAutomerge": "HIGH"
+}
+```
 
 ## `schedule`
 
