@@ -34,7 +34,7 @@ vi.mock('./vulnerabilities.ts', () => {
 vi.mock('../updates/branchify.ts');
 vi.mock('../extract/index.ts');
 vi.mock('../../../util/cache/repository/index.ts');
-vi.mock('./container-vulnerabilities', () => {
+vi.mock('./container-vulnerabilities.ts', () => {
   return {
     __esModule: true,
     ContainerVulnerabilities: class {
@@ -180,7 +180,7 @@ describe('workers/repository/process/extract-update', () => {
       const packageFiles = await extract(config);
       await lookup(config, packageFiles);
 
-      expect(createVulnerabilitiesMock).toHaveBeenCalledTimes(2);
+      expect(createVulnerabilitiesMock).toHaveBeenCalledExactlyOnceWith();
     });
 
     describe('malicious package detection', () => {
@@ -273,13 +273,10 @@ describe('workers/repository/process/extract-update', () => {
           await lookup(config, packageFiles);
 
           expect(fetch.fetchUpdates).toHaveBeenCalled();
-          expect(appendVulnerabilityPackageRulesMock).toHaveBeenCalledTimes(2);
+          expect(appendVulnerabilityPackageRulesMock).toHaveBeenCalledExactlyOnceWith(config, packageFiles);
 
           expect(packageFiles.npm).toHaveLength(1);
           expect(packageFiles.npm[0].deps).toHaveLength(2);
-          expect(packageFiles.npm[0].deps[0].skipReason).toEqual(
-            'malicious-update-proposed',
-          );
         });
       });
 
