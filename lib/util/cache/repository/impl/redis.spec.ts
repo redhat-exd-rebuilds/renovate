@@ -1,14 +1,14 @@
-import type { RedisClientType } from 'redis';
-import { createClient } from 'redis';
+import type { RedisClientType } from '@redis/client';
+import { createClient } from '@redis/client';
 import { GlobalConfig } from '../../../../config/global.ts';
 import { normalizeRedisUrl } from '../../package/redis.ts';
 import type { RepoCacheRecord } from '../schema.ts';
 import { RepoCacheRedis } from './redis.ts';
 import { fs, partial } from '~test/util';
 
-vi.mock('redis');
-vi.mock('../../../fs');
-vi.mock('../../package/redis');
+vi.mock('@redis/client');
+vi.mock('../../../fs.ts');
+vi.mock('../../package/redis.ts');
 
 describe('util/cache/repository/impl/redis', () => {
   const repository = 'org/repo';

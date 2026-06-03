@@ -1,8 +1,8 @@
 import { isArray } from '@sindresorhus/is';
 import { mockDeep } from 'vitest-mock-extended';
-import { git, logger } from '~test/util.ts';
+import { git } from '~test/util.ts';
 import { GitRefsDatasource } from '../../../../modules/datasource/git-refs/index.ts';
-import * as managerModule from '../../../../modules/manager';
+import * as managerModule from '../../../../modules/manager/index.ts';
 import * as _batectWrapper from '../../../../modules/manager/batect-wrapper/index.ts';
 import * as _bundler from '../../../../modules/manager/bundler/index.ts';
 import * as _composer from '../../../../modules/manager/composer/index.ts';
@@ -15,7 +15,6 @@ import * as _pipCompile from '../../../../modules/manager/pip-compile/index.ts';
 import * as _poetry from '../../../../modules/manager/poetry/index.ts';
 import type {
   LookupUpdate,
-  PackageDependency,
   PackageFile,
   UpdateArtifact,
 } from '../../../../modules/manager/types.ts';
@@ -26,7 +25,6 @@ import {
   managerUpdateArtifacts,
 } from './get-updated.ts';
 import * as rpmVulnPostProcessing from './rpm-post-processing.ts';
-import { git } from '~test/util.ts';
 
 const bundler = vi.mocked(_bundler);
 const composer = vi.mocked(_composer);
