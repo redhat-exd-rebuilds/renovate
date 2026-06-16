@@ -159,6 +159,8 @@
     "@baszalmstra/rattler": "0.2.1",
     "@breejs/later": "4.2.0",
     "@cdktf/hcl2json": "0.21.0",
+    "@mintmaker/osv-offline": "3.0.1",
+    "@mintmaker/osv-offline-db": "3.0.0",
     "@opentelemetry/api": "1.9.1",
     "@opentelemetry/context-async-hooks": "2.11.0",
     "@opentelemetry/exporter-trace-otlp-grpc": "0.222.0",

@@ -44,6 +44,8 @@ minimumReleaseAgeExclude:
   - '@renovatebot/good-enough-parser'
   - '@renovatebot/osv-offline'
   - '@renovatebot/osv-offline-db'
+  - '@mintmaker/osv-offline'
+  - '@mintmaker/osv-offline-db'
   - '@renovatebot/pep440'
   - '@renovatebot/pgp'
   - '@renovatebot/ruby-semver'
