@@ -303,6 +303,77 @@ describe('workers/repository/process/write', () => {
       expect(branch.commitFingerprint).toBe(commitFingerprint);
     });
 
+    it('marks rpm-lockfile branch as superseded when vulnerability branch has CVE fixes', async () => {
+      const branches: BranchConfig[] = [
+        {
+          branchName: 'renovate/main-lock-file-maintenance-vulnerability',
+          baseBranch: 'main',
+          manager: 'rpm-lockfile',
+          isLockFileMaintenance: true,
+          isVulnerabilityAlert: true,
+          upgrades: [
+            partial<BranchUpgradeConfig>({
+              prBodyNotes: ['CVE-2024-1234'],
+            }),
+          ],
+        },
+        {
+          branchName: 'renovate/main-lock-file-maintenance',
+          baseBranch: 'main',
+          manager: 'rpm-lockfile',
+          isLockFileMaintenance: true,
+          isVulnerabilityAlert: false,
+          upgrades: [],
+        },
+      ];
+      branchWorker.processBranch.mockResolvedValue({
+        branchExists: true,
+        result: 'done',
+      });
+      scm.branchExists.mockResolvedValue(true);
+
+      await writeUpdates(config, branches);
+
+      const normalBranch = branches[1];
+      expect(normalBranch.isSuperseded).toBeTrue();
+      expect(normalBranch.schedule).toEqual(['* * 31 4 *']);
+    });
+
+    it('does not mark rpm-lockfile branch as superseded when vulnerability branch has no CVE fixes', async () => {
+      const branches: BranchConfig[] = [
+        {
+          branchName: 'renovate/main-lock-file-maintenance-vulnerability',
+          baseBranch: 'main',
+          manager: 'rpm-lockfile',
+          isLockFileMaintenance: true,
+          isVulnerabilityAlert: true,
+          upgrades: [
+            partial<BranchUpgradeConfig>({
+              prBodyNotes: [],
+            }),
+          ],
+        },
+        {
+          branchName: 'renovate/main-lock-file-maintenance',
+          baseBranch: 'main',
+          manager: 'rpm-lockfile',
+          isLockFileMaintenance: true,
+          isVulnerabilityAlert: false,
+          upgrades: [],
+        },
+      ];
+      branchWorker.processBranch.mockResolvedValue({
+        branchExists: true,
+        result: 'done',
+      });
+      scm.branchExists.mockResolvedValue(true);
+
+      await writeUpdates(config, branches);
+
+      const normalBranch = branches[1];
+      expect(normalBranch.isSuperseded).toBeUndefined();
+    });
+
     it('creates new branchCache when cache is not enabled', async () => {
       const branches: BranchConfig[] = [
         {

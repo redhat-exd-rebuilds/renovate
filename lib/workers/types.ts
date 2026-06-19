@@ -194,6 +194,7 @@ export interface BranchConfig
   stabilityStatus?: BranchStatus;
   stopUpdating?: boolean;
   isConflicted?: boolean;
+  isSuperseded?: boolean;
   commitFingerprint?: string;
   cacheFingerprintMatch?: CacheFingerprintMatchResult;
   prNotPendingHours?: number;

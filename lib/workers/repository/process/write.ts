@@ -243,6 +243,7 @@ export async function writeUpdates(
             `${branch.branchName} already has a corresponding security update, preventing branch processing`,
           );
           branch.schedule = ['* * 31 4 *'];
+          branch.isSuperseded = true;
         }
       }
     }

@@ -118,18 +118,17 @@ export async function renovateRepository(
       const extractResult = performExtract
         ? await extractDependencies(config)
         : emptyExtract();
-    addExtractionStats(config, extractResult);
+      addExtractionStats(config, extractResult);
 
-    const [branches, branchList] = createRPMLockFileVulnerabilityBranches(
-      extractResult.branches,
-      config,
-    );
-    const packageFiles = extractResult.packageFiles;
+      const [branches, branchList] = createRPMLockFileVulnerabilityBranches(
+        extractResult.branches,
+        config,
+      );
+      const packageFiles = extractResult.packageFiles;
 
-    if (config.semanticCommits === 'auto') {
-      config.semanticCommits = await detectSemanticCommits();
-    }
-
+      if (config.semanticCommits === 'auto') {
+        config.semanticCommits = await detectSemanticCommits();
+      }
 
       if (
         GlobalConfig.get('dryRun') !== 'lookup' &&
@@ -159,6 +158,10 @@ export async function renovateRepository(
         if (performExtract) {
           await setBranchCache(branches); // update branch cache if performed extraction
         }
+        const activeBranchList = branchList.filter(
+          (name) =>
+            !branches.find((b) => b.branchName === name && b.isSuperseded),
+        );
         if (res === 'automerged') {
           if (canRetry) {
             logger.info('Restarting repository job after automerge result');
@@ -167,7 +170,10 @@ export async function renovateRepository(
           }
           logger.debug(`Automerged but already retried once`);
         } else {
-          const configMigrationRes = await configMigration(config, branchList);
+          const configMigrationRes = await configMigration(
+            config,
+            activeBranchList,
+          );
           await ensureDependencyDashboard(
             config,
             branches,
@@ -175,7 +181,7 @@ export async function renovateRepository(
             configMigrationRes,
           );
         }
-        await finalizeRepo(config, branchList, repoConfig);
+        await finalizeRepo(config, activeBranchList, repoConfig);
         // TODO #22198
         repoResult = processResult(config, res!);
       }
