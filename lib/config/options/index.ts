@@ -2568,6 +2568,7 @@ const options: RenovateOptions[] = [
       'npmDedupe',
       'npmInstallTwice',
       'pnpmDedupe',
+      'uvExportRequirements',
       'yarnDedupeFewer',
       'yarnDedupeHighest',
     ],
