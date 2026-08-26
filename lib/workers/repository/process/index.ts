@@ -193,6 +193,7 @@ export async function extractDependencies(
         },
       },
     );
+    logger.debug({ extracted: extracted }, 'Extracted dependencies');
     addSplit('extract');
     await instrument(
       'lookup',
@@ -232,6 +233,11 @@ export async function extractDependencies(
           [ATTR_RENOVATE_SPLIT]: 'extract',
         },
       },
+    );
+    const baseBranch = config.baseBranch ?? 'undefined';
+    logger.debug(
+      { extracted: { [baseBranch]: packageFiles } },
+      'Extracted dependencies',
     );
     addSplit('extract');
     if (GlobalConfig.get('dryRun') === 'extract') {
