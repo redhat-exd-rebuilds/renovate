@@ -191,8 +191,6 @@
     "@sindresorhus/is": "8.1.0",
     "@yarnpkg/core": "4.9.1",
     "@yarnpkg/parsers": "3.1.0",
-    "@mintmaker/osv-offline": "1.1.1",
-    "@mintmaker/osv-offline-db": "1.2.0",
     "adm-zip": "0.6.0",
     "ae-cvss-calculator": "1.0.13",
     "agentkeepalive": "4.6.0",
