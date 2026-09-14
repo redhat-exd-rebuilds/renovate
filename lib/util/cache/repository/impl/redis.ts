@@ -1,5 +1,5 @@
-import is from '@sindresorhus/is';
 import { createClient, createCluster } from '@redis/client';
+import is from '@sindresorhus/is';
 import { GlobalConfig } from '../../../../config/global.ts';
 import { logger } from '../../../../logger/index.ts';
 import { outputCacheFile } from '../../../fs/index.ts';
@@ -9,9 +9,7 @@ import type { RepoCacheRecord } from '../schema.ts';
 import { RepoCacheBase } from './base.ts';
 
 type RedisType =
-  | ReturnType<typeof createClient>
-  | ReturnType<typeof createCluster>
-  | null;
+  ReturnType<typeof createClient> | ReturnType<typeof createCluster> | null;
 
 const NAMESPACE = 'repository';
 
@@ -39,7 +37,7 @@ export class RepoCacheRedis extends RepoCacheBase {
   async write(data: RepoCacheRecord): Promise<void> {
     this.redisClient ??= await this.getRedisClient();
     const stringifiedCache = JSON.stringify(data);
-    const ttlDays = GlobalConfig.get('httpCacheTtlDays', 90);
+    const ttlDays = GlobalConfig.get('httpCacheTtlDays') ?? 90;
     try {
       await this.redisClient?.set(this.getCacheKey(), stringifiedCache, {
         EX: ttlDays * 24 * 60 * 60,
@@ -90,6 +88,6 @@ export class RepoCacheRedis extends RepoCacheBase {
       : createClient(config);
 
     await redisClient.connect();
-    return redisClient;
+    return redisClient as RedisType;
   }
 }

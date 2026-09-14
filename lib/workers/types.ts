@@ -48,6 +48,7 @@ export interface BranchUpgradeConfig
   commitBody?: string;
   commitMessage?: string;
   commitMessageExtra?: string;
+  commitMessageSuffix?: string;
   currentDigest?: string;
   currentDigestShort?: string;
   currentValue?: string;
@@ -130,6 +131,7 @@ export interface BranchUpgradeConfig
   sourceRepoName?: string;
 
   constraints?: Partial<Record<ConstraintName, string>>;
+  vulnerabilityFixStrategy?: string;
 }
 
 export type PrBlockedBy =

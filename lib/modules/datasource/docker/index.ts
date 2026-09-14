@@ -10,6 +10,7 @@ import { memCacheProvider } from '../../../util/http/cache/memory-http-cache-pro
 import { HttpError } from '../../../util/http/index.ts';
 import type { HttpResponse } from '../../../util/http/types.ts';
 import { hasKey } from '../../../util/object.ts';
+import { regEx } from '../../../util/regex.ts';
 import { type AsyncResult, Result } from '../../../util/result.ts';
 import { isDockerDigest } from '../../../util/string-match.ts';
 import { asTimestamp } from '../../../util/timestamp.ts';
@@ -1350,7 +1351,7 @@ export class DockerDatasource extends Datasource {
           .split('/')
           .slice(-1)
           .join('/')
-          .replace(/^task-/, '');
+          .replace(regEx(/^task-/), '');
         ret.changelogUrl = `${ret.sourceUrl}/blob/main/task/${packageNameAbsolute}/CHANGELOG.md`;
         ret.sourceDirectory = `task/${packageNameAbsolute}`;
       }

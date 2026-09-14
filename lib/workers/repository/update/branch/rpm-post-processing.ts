@@ -1,11 +1,13 @@
-import is from '@sindresorhus/is';
+import is, { isString } from '@sindresorhus/is';
 import { logger } from '../../../../logger/index.ts';
 import { RedHatRPMLockfile } from '../../../../modules/manager/rpm-lockfile/schema.ts';
 import type {
   PackageDependency,
   UpdateArtifactsResult,
 } from '../../../../modules/manager/types.ts';
+import { coerceArray } from '../../../../util/array.ts';
 import * as p from '../../../../util/promises.ts';
+import { regEx } from '../../../../util/regex.ts';
 import { severityOrder } from '../../../../util/vulnerability/utils.ts';
 import { parseSingleYaml } from '../../../../util/yaml.ts';
 import type { BranchConfig, BranchUpgradeConfig } from '../../../types.ts';
@@ -98,7 +100,8 @@ export function getUpgrade(
   );
   if (uniqueUpgrades.length > 1) {
     logger.warn(
-      `Found ${uniqueUpgrades.length} matching upgrades, returning first one`,
+      { count: uniqueUpgrades.length },
+      'Found multiple matching upgrades, returning first one',
     );
     return uniqueUpgrades[0];
   }
@@ -122,10 +125,7 @@ export function parseLockfilePackages(
     const oldLockFileContent = result.file.previousContents;
     const newLockFileContent = result.file.contents;
 
-    if (
-      typeof oldLockFileContent === 'string' &&
-      typeof newLockFileContent === 'string'
-    ) {
+    if (isString(oldLockFileContent) && isString(newLockFileContent)) {
       try {
         const oldLockFile = parseSingleYaml(oldLockFileContent, {
           customSchema: RedHatRPMLockfile,
@@ -230,14 +230,14 @@ export function createUpdatesTable(
   let tableMarkdown = `File ${upgrade.packageFile}:\n\n`;
   tableMarkdown += getPrUpdatesTable(dummyBranchConfig);
   tableMarkdown = tableMarkdown.replace(
-    /\n\nThis PR contains the following updates:\n\n/,
+    regEx(/\n\nThis PR contains the following updates:\n\n/),
     '',
   );
 
   if (!config.prHeader?.includes('This PR contains the following updates:')) {
     config.prHeader = 'This PR contains the following updates:';
   }
-  config.prHeader += '\n\n' + tableMarkdown;
+  config.prHeader += `\n\n${tableMarkdown}`;
 
   // Remove {{{table}}} from prBodyTemplate to avoid duplicate table
   if (config.prBodyTemplate) {
@@ -300,8 +300,11 @@ export function applyVulnerabilityPRNotes(
     prBodyNotesList.push(...prBodyNotes);
   }
 
-  config.prBodyNotes = [...(config.prBodyNotes ?? []), ...prBodyNotesList];
-  upgrade.prBodyNotes = [...(upgrade.prBodyNotes ?? []), ...prBodyNotesList];
+  config.prBodyNotes = [...coerceArray(config.prBodyNotes), ...prBodyNotesList];
+  upgrade.prBodyNotes = [
+    ...coerceArray(upgrade.prBodyNotes),
+    ...prBodyNotesList,
+  ];
 }
 
 export function determineSeverityAutomerge(
@@ -350,11 +353,12 @@ export function determineSeverityAutomerge(
 
     if (
       configValue !== null &&
-      (typeof configValue !== 'string' ||
+      (!isString(configValue) ||
         !validValues.includes(configValue.toUpperCase()))
     ) {
       logger.warn(
-        `Invalid rpmVulnerabilityAutomerge value: ${configValue}. Valid values are: ALL, MEDIUM, HIGH, CRITICAL`,
+        { configValue, validValues },
+        'Invalid rpmVulnerabilityAutomerge value',
       );
     } else if (
       config.rpmVulnerabilityAutomerge !== null &&

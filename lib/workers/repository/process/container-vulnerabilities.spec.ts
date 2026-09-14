@@ -34,7 +34,7 @@ describe('workers/repository/process/container-vulnerabilities', () => {
     it('throws when osv-offline error', async () => {
       createMock.mockRejectedValue(new Error());
 
-      await expect(ContainerVulnerabilities.create()).rejects.toThrow();
+      await expect(ContainerVulnerabilities.create()).rejects.toThrow(Error);
     });
   });
 
@@ -220,7 +220,11 @@ describe('workers/repository/process/container-vulnerabilities', () => {
       );
 
       expect(logger.logger.warn).toHaveBeenCalledWith(
-        'Failed to get "created" timestamp of quay.io/test/repo@sha256:abcd or quay.io/test/repo@sha256:defa',
+        {
+          oldImage: 'quay.io/test/repo@sha256:abcd',
+          newImage: 'quay.io/test/repo@sha256:defa',
+        },
+        'Failed to get "created" timestamp of container images',
       );
     });
 
@@ -249,7 +253,8 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         packageFiles,
       );
       expect(logger.logger.warn).toHaveBeenCalledWith(
-        'cannot split malformed-image@sha256:abcd to registry, repo, digest',
+        { imageRef: 'malformed-image@sha256:abcd' },
+        'Cannot split image ref to registry, repo, digest',
       );
     });
 
@@ -294,10 +299,15 @@ describe('workers/repository/process/container-vulnerabilities', () => {
       );
 
       expect(logger.logger.warn).toHaveBeenCalledWith(
-        'cannot get config digest of quay.io/test/repo@sha256:defa',
+        { imageRef: 'quay.io/test/repo@sha256:defa' },
+        'cannot get config digest of image',
       );
       expect(logger.logger.warn).toHaveBeenCalledWith(
-        'Failed to get "created" timestamp of quay.io/test/repo@sha256:abcd or quay.io/test/repo@sha256:defa',
+        {
+          oldImage: 'quay.io/test/repo@sha256:abcd',
+          newImage: 'quay.io/test/repo@sha256:defa',
+        },
+        'Failed to get "created" timestamp of container images',
       );
     });
 
@@ -342,10 +352,15 @@ describe('workers/repository/process/container-vulnerabilities', () => {
       );
 
       expect(logger.logger.warn).toHaveBeenCalledWith(
-        'cannot get image config of quay.io/test/repo@sha256:defa',
+        { imageRef: 'quay.io/test/repo@sha256:defa' },
+        'cannot get image config of image',
       );
       expect(logger.logger.warn).toHaveBeenCalledWith(
-        'Failed to get "created" timestamp of quay.io/test/repo@sha256:abcd or quay.io/test/repo@sha256:defa',
+        {
+          oldImage: 'quay.io/test/repo@sha256:abcd',
+          newImage: 'quay.io/test/repo@sha256:defa',
+        },
+        'Failed to get "created" timestamp of container images',
       );
     });
 
@@ -571,8 +586,8 @@ describe('workers/repository/process/container-vulnerabilities', () => {
         packageFiles,
       );
       expect(logger.logger.warn).toHaveBeenCalledWith(
-        { err },
-        'Error fetching vulnerability information for quay.io/test/repo',
+        { err, depName: 'quay.io/test/repo' },
+        'Error fetching vulnerability information for dependency',
       );
     });
 

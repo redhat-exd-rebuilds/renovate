@@ -1,4 +1,3 @@
-import type { RedisClientType } from '@redis/client';
 import { createClient } from '@redis/client';
 import { fs, partial } from '~test/util.ts';
 import { GlobalConfig } from '../../../../config/global.ts';
@@ -26,37 +25,43 @@ describe('util/cache/repository/impl/redis', () => {
 
   describe('read()', () => {
     it('successfully reads from redis', async () => {
-      const mockClient: Partial<RedisClientType> = {
+      const mockClient = {
         get: vi.fn().mockResolvedValue(JSON.stringify(repoCache)),
         connect: vi.fn(),
       };
-      vi.mocked(createClient).mockReturnValue(mockClient as RedisClientType);
+      vi.mocked(createClient).mockReturnValue(
+        mockClient as unknown as ReturnType<typeof createClient>,
+      );
 
       await expect(redisCache.read()).resolves.toBe(JSON.stringify(repoCache));
     });
 
     it('returns null when cache is not found', async () => {
-      const mockClient: Partial<RedisClientType> = {
+      const mockClient = {
         get: vi.fn().mockResolvedValue(null),
         connect: vi.fn(),
       };
-      vi.mocked(createClient).mockReturnValue(mockClient as RedisClientType);
+      vi.mocked(createClient).mockReturnValue(
+        mockClient as unknown as ReturnType<typeof createClient>,
+      );
 
       await expect(redisCache.read()).resolves.toBeNull();
     });
 
     it('handles redis read errors gracefully', async () => {
-      const mockClient: Partial<RedisClientType> = {
+      const mockClient = {
         get: vi.fn().mockRejectedValue(err),
         connect: vi.fn(),
       };
-      vi.mocked(createClient).mockReturnValue(mockClient as RedisClientType);
+      vi.mocked(createClient).mockReturnValue(
+        mockClient as unknown as ReturnType<typeof createClient>,
+      );
 
       await expect(redisCache.read()).resolves.toBeNull();
     });
 
     it('reuses existing redis client', async () => {
-      const mockClient: Partial<RedisClientType> = {
+      const mockClient = {
         get: vi.fn().mockResolvedValue(JSON.stringify(repoCache)),
         connect: vi.fn(),
       };
@@ -73,11 +78,13 @@ describe('util/cache/repository/impl/redis', () => {
 
   describe('write()', () => {
     it('successfully writes to redis', async () => {
-      const mockClient: Partial<RedisClientType> = {
+      const mockClient = {
         set: vi.fn().mockResolvedValue('OK'),
         connect: vi.fn(),
       };
-      vi.mocked(createClient).mockReturnValue(mockClient as RedisClientType);
+      vi.mocked(createClient).mockReturnValue(
+        mockClient as unknown as ReturnType<typeof createClient>,
+      );
 
       await expect(redisCache.write(repoCache)).resolves.toBeUndefined();
       expect(mockClient.set).toHaveBeenCalledWith(
@@ -88,22 +95,26 @@ describe('util/cache/repository/impl/redis', () => {
     });
 
     it('handles redis write errors gracefully', async () => {
-      const mockClient: Partial<RedisClientType> = {
+      const mockClient = {
         set: vi.fn().mockRejectedValue(err),
         connect: vi.fn(),
       };
-      vi.mocked(createClient).mockReturnValue(mockClient as RedisClientType);
+      vi.mocked(createClient).mockReturnValue(
+        mockClient as unknown as ReturnType<typeof createClient>,
+      );
 
       await expect(redisCache.write(repoCache)).resolves.toBeUndefined();
     });
 
     it('persists data locally when RENOVATE_X_REPO_CACHE_FORCE_LOCAL is set', async () => {
-      process.env.RENOVATE_X_REPO_CACHE_FORCE_LOCAL = 'true';
-      const mockClient: Partial<RedisClientType> = {
+      vi.stubEnv('RENOVATE_X_REPO_CACHE_FORCE_LOCAL', 'true');
+      const mockClient = {
         set: vi.fn().mockResolvedValue('OK'),
         connect: vi.fn(),
       };
-      vi.mocked(createClient).mockReturnValue(mockClient as RedisClientType);
+      vi.mocked(createClient).mockReturnValue(
+        mockClient as unknown as ReturnType<typeof createClient>,
+      );
 
       await redisCache.write(repoCache);
 
@@ -116,7 +127,7 @@ describe('util/cache/repository/impl/redis', () => {
 
   describe('cleanup()', () => {
     it('successfully disconnects from redis', async () => {
-      const mockClient: Partial<RedisClientType> = {
+      const mockClient = {
         disconnect: vi.fn().mockResolvedValue(undefined),
       };
       (redisCache as any).redisClient = mockClient;

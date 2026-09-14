@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 export const RedHatRPMLockfile = z.object({
   lockfileVersion: z.number(),
@@ -21,4 +21,4 @@ export const RedHatRPMLockfile = z.object({
   ),
 });
 
-export type RedHatRPMLockfileDefinition = z.infer<typeof RedHatRPMLockfile>;
+export type RedHatRPMLockfile = z.infer<typeof RedHatRPMLockfile>;

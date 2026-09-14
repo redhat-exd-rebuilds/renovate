@@ -1,3 +1,4 @@
+import { quote } from 'shlex';
 import { TEMPORARY_ERROR } from '../../../constants/error-messages.ts';
 import { logger } from '../../../logger/index.ts';
 import { exec } from '../../../util/exec/index.ts';
@@ -41,7 +42,7 @@ export async function updateArtifacts({
     await deleteLocalFile(lockFileName);
 
     cmd.push(
-      `rpm-lockfile-prototype ${packageFileName} --outfile ${lockFileName}`,
+      `rpm-lockfile-prototype ${quote(packageFileName)} --outfile ${quote(lockFileName)}`,
     );
 
     // Do not set cwdFile in ExecOptions, because packageFileName

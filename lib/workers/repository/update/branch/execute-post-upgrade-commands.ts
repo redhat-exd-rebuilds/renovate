@@ -13,6 +13,7 @@ import {
   isConstraintName,
   isToolName,
 } from '../../../../util/exec/types.ts';
+import { getChildEnv } from '../../../../util/exec/utils.ts';
 import {
   ensureLocalDir,
   localPathIsFile,
@@ -173,7 +174,7 @@ export async function postUpgradeCommandsExecutor(
 
               cwd: workingDir,
               extraEnv: {
-                ...getGitEnvironmentVariables(),
+                ...getGitEnvironmentVariables(getChildEnv()),
                 ...(compiledCmd.startsWith('refresh-rpm-lockfiles') && {
                   DNF_VAR_SSL_CLIENT_KEY: process.env.DNF_VAR_SSL_CLIENT_KEY,
                   DNF_VAR_SSL_CLIENT_CERT: process.env.DNF_VAR_SSL_CLIENT_CERT,

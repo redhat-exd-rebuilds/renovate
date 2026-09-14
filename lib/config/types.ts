@@ -40,11 +40,7 @@ export type DryRunConfig = 'extract' | 'lookup' | 'full';
 export type InternalHostAccess = 'allow' | 'warn' | 'block';
 export type RequiredConfig = 'required' | 'optional' | 'ignored';
 export type RPMVulnerabilityAutomerge =
-  | 'ALL'
-  | 'MEDIUM'
-  | 'HIGH'
-  | 'CRITICAL'
-  | null;
+  'ALL' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | null;
 
 export interface GroupConfig extends Record<string, unknown> {
   branchName?: string;

@@ -14,16 +14,17 @@ export class CacheFactory {
     const type = cacheType.split('://')[0].trim().toLowerCase();
     if (type === 'local') {
       return new RepoCacheLocal(repository, repoFingerprint);
-    } else if (type === 's3') {
-      return new RepoCacheS3(repository, repoFingerprint, cacheType);
-    } else if (type.includes('redis')) {
-      return new RepoCacheRedis(repository, repoFingerprint, cacheType);
-    } else {
-      logger.warn(
-        { cacheType },
-        `Repository cache type not supported using type "local" instead`,
-      );
-      return new RepoCacheLocal(repository, repoFingerprint);
     }
+    if (type === 's3') {
+      return new RepoCacheS3(repository, repoFingerprint, cacheType);
+    }
+    if (type.includes('redis')) {
+      return new RepoCacheRedis(repository, repoFingerprint, cacheType);
+    }
+    logger.warn(
+      { cacheType },
+      `Repository cache type not supported using type "local" instead`,
+    );
+    return new RepoCacheLocal(repository, repoFingerprint);
   }
 }

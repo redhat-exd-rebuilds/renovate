@@ -58,6 +58,7 @@ export const CategoryNames: Record<Category, string> = {
   perl: 'Perl',
   php: 'PHP',
   python: 'Python',
+  rpm: 'RPM',
   ruby: 'Ruby',
   rust: 'Rust',
   swift: 'Swift',
