@@ -9,8 +9,6 @@ import type {
   PackageDependency,
   PackageFile,
 } from '../../../modules/manager/types.ts';
-import { findGithubToken } from '../../../util/check-token.ts';
-import { find } from '../../../util/host-rules.ts';
 import { sanitizeMarkdown } from '../../../util/markdown.ts';
 import * as p from '../../../util/promises.ts';
 import { regEx } from '../../../util/regex.ts';
@@ -27,15 +25,7 @@ export class ContainerVulnerabilities {
   }
 
   private async initialize(): Promise<void> {
-    // hard-coded logic to use authentication for github.com based on the githubToken for api.github.com
-    const token = findGithubToken(
-      find({
-        hostType: 'github',
-        url: 'https://api.github.com/',
-      }),
-    );
-
-    this.osvOffline = await OsvOffline.create(token);
+    this.osvOffline = await OsvOffline.create();
   }
 
   static async create(): Promise<ContainerVulnerabilities> {

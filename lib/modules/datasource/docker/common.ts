@@ -133,9 +133,9 @@ export async function getAuthHeaders(
       }
     } else if (
       googleRegex.test(registryHost) &&
-      isUndefined(rule.username) &&
-      isUndefined(rule.password) &&
-      isUndefined(rule.token)
+      isUndefined(opts.username) &&
+      isUndefined(opts.password) &&
+      isUndefined(opts.token)
     ) {
       logger.once.debug(`hostRules: google auth for ${registryHost}`);
       logger.trace(

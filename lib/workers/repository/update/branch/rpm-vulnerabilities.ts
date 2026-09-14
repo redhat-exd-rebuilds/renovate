@@ -11,8 +11,6 @@ import type {
 } from '../../../../modules/manager/types.ts';
 import type { VersioningApi } from '../../../../modules/versioning/index.ts';
 import { get as getVersioning } from '../../../../modules/versioning/index.ts';
-import { findGithubToken } from '../../../../util/check-token.ts';
-import { find } from '../../../../util/host-rules.ts';
 import { sanitizeMarkdown } from '../../../../util/markdown.ts';
 import { regEx } from '../../../../util/regex.ts';
 import { titleCase } from '../../../../util/string.ts';
@@ -38,15 +36,7 @@ export class RpmVulnerabilities {
   }
 
   private async initialize(): Promise<void> {
-    // hard-coded logic to use authentication for github.com based on the githubToken for api.github.com
-    const token = findGithubToken(
-      find({
-        hostType: 'github',
-        url: 'https://api.github.com/',
-      }),
-    );
-
-    this.osvOffline = await OsvOffline.create(token);
+    this.osvOffline = await OsvOffline.create();
   }
 
   static async create(): Promise<RpmVulnerabilities> {
@@ -152,6 +142,7 @@ export class RpmVulnerabilities {
 
           vulnerabilities.push({
             packageName,
+            osvPackageName: packageName,
             vulnerability: osvVulnerability,
             affected,
             depVersion,
