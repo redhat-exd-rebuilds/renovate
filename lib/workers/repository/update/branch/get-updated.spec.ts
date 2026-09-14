@@ -2,13 +2,13 @@ import { isArray } from '@sindresorhus/is';
 import { mockDeep } from 'vitest-mock-extended';
 import { git, logger } from '~test/util.ts';
 import { GitRefsDatasource } from '../../../../modules/datasource/git-refs/index.ts';
-import * as managerModule from '../../../../modules/manager/index.ts';
 import * as _batectWrapper from '../../../../modules/manager/batect-wrapper/index.ts';
 import * as _bundler from '../../../../modules/manager/bundler/index.ts';
 import * as _composer from '../../../../modules/manager/composer/index.ts';
 import * as _gitSubmodules from '../../../../modules/manager/git-submodules/index.ts';
 import * as _gomod from '../../../../modules/manager/gomod/index.ts';
 import * as _helmv3 from '../../../../modules/manager/helmv3/index.ts';
+import * as managerModule from '../../../../modules/manager/index.ts';
 import * as _npm from '../../../../modules/manager/npm/index.ts';
 import * as _pep621 from '../../../../modules/manager/pep621/index.ts';
 import * as _pipCompile from '../../../../modules/manager/pip-compile/index.ts';
@@ -21,7 +21,10 @@ import type {
 } from '../../../../modules/manager/types.ts';
 import type { BranchConfig, BranchUpgradeConfig } from '../../../types.ts';
 import * as _autoReplace from './auto-replace.ts';
-import { getUpdatedPackageFiles, managerUpdateArtifacts } from './get-updated.ts';
+import {
+  getUpdatedPackageFiles,
+  managerUpdateArtifacts,
+} from './get-updated.ts';
 import * as rpmVulnPostProcessing from './rpm-post-processing.ts';
 
 const bundler = vi.mocked(_bundler);
@@ -78,7 +81,7 @@ function expectPipCompilePackageAndLockFile(
       });
     },
     `pipCompile.updateArtifacts() must be called for package file ${expectedPackageFileName}` +
-    ` and with lock file ${expectedLockFileName}`,
+      ` and with lock file ${expectedLockFileName}`,
   );
 }
 
@@ -1801,7 +1804,7 @@ describe('workers/repository/update/branch/get-updated', () => {
   });
 });
 
-describe('managerUpdateArtifacts', () => {
+describe('workers/repository/update/branch/get-updated', () => {
   const updateArtifact = {
     packageFileName: 'file',
     updatedDeps: [],

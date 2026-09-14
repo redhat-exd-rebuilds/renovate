@@ -1,3 +1,4 @@
+import { partial } from '~test/util.ts';
 import { RedHatRPMLockfile } from '../../../../modules/manager/rpm-lockfile/schema.ts';
 import { parseSingleYaml } from '../../../../util/yaml.ts';
 import * as updatesTableModule from '../pr/body/updates-table.ts';
@@ -157,7 +158,7 @@ arches:
               },
             ],
           }),
-      } as any;
+      };
 
       const vulns = await createVulnerabilities(
         packages as any,
@@ -175,7 +176,7 @@ arches:
     it('appends notes to config and upgrade', () => {
       const rpmVulns: Partial<RpmVulnerabilities> = {
         generatePrBodyNotes: vi.fn().mockReturnValue(['note-a', 'note-b']),
-      } as any;
+      };
 
       const config: any = {
         upgrades: [{ prBodyNotes: ['existing'] }],
@@ -214,10 +215,10 @@ arches:
       const gen = vi.fn().mockReturnValue(['n']);
       const rpmVulns: Partial<RpmVulnerabilities> = {
         generatePrBodyNotes: gen,
-      } as any;
+      };
 
       const config: any = {
-        prBodyNotes: new Array(9).fill('e'),
+        prBodyNotes: Array.from({ length: 9 }, () => 'e'),
       };
       const upgrade: any = { prBodyNotes: [] };
       const vulnerabilities: any[] = [
@@ -475,12 +476,9 @@ arches:
   });
 
   describe('determineSeverityAutomerge()', () => {
-    const mockRpmVulns = {
-      extractSeverityDetails: vi.fn(),
-    } as any;
-
-    beforeEach(() => {
-      vi.clearAllMocks();
+    const extractSeverityDetails = vi.fn();
+    const mockRpmVulns = partial<RpmVulnerabilities>({
+      extractSeverityDetails,
     });
 
     it('should set vulnerabilitySeverity to highest severity from vulnerabilities', () => {
@@ -489,7 +487,7 @@ arches:
         { vulnerability: { id: 'VULN-2' }, affected: {} },
       ] as any;
 
-      mockRpmVulns.extractSeverityDetails
+      extractSeverityDetails
         .mockReturnValueOnce({ severityLevel: 'medium' })
         .mockReturnValueOnce({ severityLevel: 'high' });
 
@@ -527,7 +525,7 @@ arches:
           { vulnerability: { id: 'VULN-1' }, affected: {} },
         ] as any;
 
-        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+        extractSeverityDetails.mockReturnValueOnce({
           severityLevel: 'low',
         });
 
@@ -571,7 +569,7 @@ arches:
           { vulnerability: { id: 'VULN-1' }, affected: {} },
         ] as any;
 
-        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+        extractSeverityDetails.mockReturnValueOnce({
           severityLevel: 'high',
         });
 
@@ -597,7 +595,7 @@ arches:
           { vulnerability: { id: 'VULN-1' }, affected: {} },
         ] as any;
 
-        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+        extractSeverityDetails.mockReturnValueOnce({
           severityLevel: 'medium',
         });
 
@@ -623,7 +621,7 @@ arches:
           { vulnerability: { id: 'VULN-1' }, affected: {} },
         ] as any;
 
-        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+        extractSeverityDetails.mockReturnValueOnce({
           severityLevel: 'critical',
         });
 
@@ -649,7 +647,7 @@ arches:
           { vulnerability: { id: 'VULN-1' }, affected: {} },
         ] as any;
 
-        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+        extractSeverityDetails.mockReturnValueOnce({
           severityLevel: 'high',
         });
 
@@ -674,7 +672,7 @@ arches:
           { vulnerability: { id: 'VULN-1' }, affected: {} },
         ] as any;
 
-        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+        extractSeverityDetails.mockReturnValueOnce({
           severityLevel: 'critical',
         });
 
@@ -699,7 +697,7 @@ arches:
           { vulnerability: { id: 'VULN-1' }, affected: {} },
         ] as any;
 
-        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+        extractSeverityDetails.mockReturnValueOnce({
           severityLevel: 'critical',
         });
 
@@ -725,7 +723,7 @@ arches:
           { vulnerability: { id: 'VULN-1' }, affected: {} },
         ] as any;
 
-        mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+        extractSeverityDetails.mockReturnValueOnce({
           severityLevel: 'high',
         });
 
@@ -753,7 +751,7 @@ arches:
             { vulnerability: { id: 'VULN-1' }, affected: {} },
           ] as any;
 
-          mockRpmVulns.extractSeverityDetails.mockReturnValueOnce({
+          extractSeverityDetails.mockReturnValueOnce({
             severityLevel: 'critical',
           });
 
@@ -794,7 +792,7 @@ arches:
             { vulnerability: { id: 'VULN-2' }, affected: {} },
           ] as any;
 
-          mockRpmVulns.extractSeverityDetails
+          extractSeverityDetails
             .mockReturnValueOnce({ severityLevel: testCase.first })
             .mockReturnValueOnce({ severityLevel: testCase.second });
 
@@ -818,7 +816,7 @@ arches:
   });
 
   describe('postProcessRPMs()', () => {
-    const buildLockfileResult = (oldEvr: string, newEvr: string) => {
+    function buildLockfileResult(oldEvr: string, newEvr: string) {
       const oldYaml = `
 lockfileVersion: 1
 lockfileVendor: RedHat
@@ -844,7 +842,7 @@ arches:
           },
         },
       ];
-    };
+    }
 
     it('returns null when result is null', async () => {
       const cfg: any = { upgrades: [{}] };
@@ -880,7 +878,7 @@ arches:
       const fake: Partial<RpmVulnerabilities> = {
         fetchDependencyVulnerability: vi.fn().mockResolvedValue(null),
         generatePrBodyNotes: vi.fn().mockReturnValue([]),
-      } as any;
+      };
       vi.spyOn(RpmVulnerabilities, 'create').mockResolvedValue(fake as any);
 
       const cfg: any = { upgrades: [{}], isVulnerabilityAlert: true };
@@ -901,7 +899,7 @@ arches:
         extractSeverityDetails: vi
           .fn()
           .mockReturnValue({ severityLevel: 'medium' }),
-      } as any;
+      };
       vi.spyOn(RpmVulnerabilities, 'create').mockResolvedValue(fake as any);
 
       const cfg: any = {

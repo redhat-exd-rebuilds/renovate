@@ -651,7 +651,7 @@ async function tryPrAutomerge(
         logger.debug(`PR not yet in mergeable state. Retrying ${attempt}`);
         await setTimeout(mergeDelay * attempt ** 2); // exponential backoff
       }
-      
+
       if (platformPrOptions.requireTestsForPlatformAutomerge && !testsPresent) {
         logger.debug(
           'requireTestsForPlatformAutomerge is enabled and tests are not present, skipping automerge',

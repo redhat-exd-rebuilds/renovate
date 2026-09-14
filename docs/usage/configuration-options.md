@@ -1031,7 +1031,7 @@ For example, to use a SemVer-style versioning scheme when defining the `rubygems
 ## `containerVulnerabilityAlerts`
 
 !!! warning
-    This is an experimental feature.
+  This is an experimental feature.
 
 Set `containerVulnerabilityAlerts` to `true` to enable vulnerability alerts specifically for container images.
 
@@ -4870,7 +4870,7 @@ We recommend you do this selectively with `packageRules` and not globally.
 ## `rpmVulnerabilityAlerts`
 
 !!! warning
-    This is an experimental feature.
+  This is an experimental feature.
 
 Set `rpmVulnerabilityAlerts` to `true` to enable vulnerability alerts for RPM packages.
 
@@ -4879,11 +4879,12 @@ When enabled, Renovate will check RPM dependencies for known vulnerabilities and
 ## `rpmVulnerabilityAutomerge`
 
 !!! warning
-    This is an experimental feature.
+  This is an experimental feature.
 
 Set at what criticality level should RPM vulnerability PRs be automerged.
 
 Allowed values:
+
 - `'ALL'`: Automerge all RPM vulnerability updates
 - `'MEDIUM'`: Automerge RPM vulnerabilities with medium severity or higher
 - `'HIGH'`: Automerge RPM vulnerabilities with high severity or higher

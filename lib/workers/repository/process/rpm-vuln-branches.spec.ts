@@ -1,9 +1,10 @@
+import { partial } from '~test/util.ts';
 import type { RenovateConfig } from '../../../config/types.ts';
 import type { BranchConfig } from '../../types.ts';
 import { createRPMLockFileVulnerabilityBranches } from './rpm-vuln-branches.ts';
 
-vi.mock('../../../logger', () => ({ logger: { debug: vi.fn() } }));
-vi.mock('../../../util/clone', () => ({
+vi.mock('../../../logger/index.ts', () => ({ logger: { debug: vi.fn() } }));
+vi.mock('../../../util/clone.ts', () => ({
   clone: (obj: any) => JSON.parse(JSON.stringify(obj)),
 }));
 
@@ -33,7 +34,7 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
   };
 
   it('returns original branches if rpmVulnerabilityAlerts is false', () => {
-    const config: RenovateConfig = { rpmVulnerabilityAlerts: false } as any;
+    const config: RenovateConfig = { rpmVulnerabilityAlerts: false };
     const branches = [baseBranch];
     const [resultBranches, branchNames] =
       createRPMLockFileVulnerabilityBranches(branches, config);
@@ -42,7 +43,7 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
   });
 
   it('returns original branches if no rpm-lockfile maintenance branch', () => {
-    const config: RenovateConfig = { rpmVulnerabilityAlerts: true } as any;
+    const config: RenovateConfig = { rpmVulnerabilityAlerts: true };
     const branches = [
       { ...baseBranch, manager: 'npm', isLockFileMaintenance: false },
     ];
@@ -54,7 +55,7 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
   });
 
   it('duplicates and mutates rpm-lockfile maintenance branch', () => {
-    const config: RenovateConfig = { rpmVulnerabilityAlerts: true } as any;
+    const config: RenovateConfig = { rpmVulnerabilityAlerts: true };
     const branches = [baseBranch];
     const [resultBranches, branchNames] =
       createRPMLockFileVulnerabilityBranches(branches, config);
@@ -95,7 +96,7 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
   });
 
   it('handles multiple rpm-lockfile maintenance branches', () => {
-    const config: RenovateConfig = { rpmVulnerabilityAlerts: true } as any;
+    const config: RenovateConfig = { rpmVulnerabilityAlerts: true };
     const branch1 = { ...baseBranch, branchName: 'rpm-lockfile-maintenance-1' };
     const branch2 = { ...baseBranch, branchName: 'rpm-lockfile-maintenance-2' };
     const nonRpmBranch = {
@@ -129,7 +130,7 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
   });
 
   it('preserves original branch properties unchanged', () => {
-    const config: RenovateConfig = { rpmVulnerabilityAlerts: true } as any;
+    const config: RenovateConfig = { rpmVulnerabilityAlerts: true };
     const originalBranch = {
       ...baseBranch,
       schedule: ['after 2am'],
@@ -158,10 +159,10 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
   });
 
   it('sets rpmVulnerabilityAutomerge from config', () => {
-    const config: RenovateConfig = {
+    const config = partial<RenovateConfig>({
       rpmVulnerabilityAlerts: true,
       rpmVulnerabilityAutomerge: 'HIGH',
-    } as any;
+    });
     const branches = [baseBranch];
 
     const [resultBranches] = createRPMLockFileVulnerabilityBranches(
@@ -176,7 +177,7 @@ describe('workers/repository/process/rpm-vuln-branches', () => {
   it('sets rpmVulnerabilityAutomerge to undefined when config is undefined', () => {
     const config: RenovateConfig = {
       rpmVulnerabilityAlerts: true,
-    } as any;
+    };
     const branches = [baseBranch];
 
     const [resultBranches] = createRPMLockFileVulnerabilityBranches(

@@ -1,9 +1,10 @@
-import { DateTime } from 'luxon';
 import type { RedisClusterOptions } from '@redis/client';
 import { createClient, createCluster } from '@redis/client';
+import { DateTime } from 'luxon';
 import { logger } from '../../../logger/index.ts';
 import { compressToBase64, decompressFromBase64 } from '../../compress.ts';
 import { regEx } from '../../regex.ts';
+import { parseUrl } from '../../url.ts';
 import type { PackageCacheNamespace } from './types.ts';
 
 let client:
@@ -17,7 +18,10 @@ function getKey(namespace: PackageCacheNamespace, key: string): string {
 }
 
 export function normalizeRedisUrl(url: string): string {
-  return url.replace(regEx(/^(rediss?)\+cluster:\/\//), '$1://');
+  return url.replace(
+    regEx(/^(?<protocol>rediss?)\+cluster:\/\//),
+    '$<protocol>://',
+  );
 }
 
 export async function end(): Promise<void> {
@@ -124,14 +128,14 @@ export async function init(
     const clusterConfig: RedisClusterOptions = { rootNodes: [config] };
 
     // only add defaults if username or password are present in the URL
-    const parsedUrl = new URL(rewrittenUrl);
-    if (parsedUrl.username) {
+    const parsedUrl = parseUrl(rewrittenUrl);
+    if (parsedUrl?.username) {
       clusterConfig.defaults = {
         username: parsedUrl.username,
       };
     }
 
-    if (parsedUrl.password) {
+    if (parsedUrl?.password) {
       clusterConfig.defaults ??= {};
       clusterConfig.defaults.password = parsedUrl.password;
     }

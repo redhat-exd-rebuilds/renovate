@@ -1,6 +1,7 @@
 import type { Osv } from '@mintmaker/osv-offline';
 import { OsvOffline } from '@mintmaker/osv-offline';
-import is from '@sindresorhus/is';
+import is, { isString } from '@sindresorhus/is';
+import { DateTime } from 'luxon';
 import { getManagerConfig, mergeChildConfig } from '../../../config/index.ts';
 import type { PackageRule, RenovateConfig } from '../../../config/types.ts';
 import { logger } from '../../../logger/index.ts';
@@ -9,6 +10,7 @@ import type {
   PackageDependency,
   PackageFile,
 } from '../../../modules/manager/types.ts';
+import { coerceArray } from '../../../util/array.ts';
 import { sanitizeMarkdown } from '../../../util/markdown.ts';
 import * as p from '../../../util/promises.ts';
 import { regEx } from '../../../util/regex.ts';
@@ -154,13 +156,14 @@ export class ContainerVulnerabilities {
         '"created" metadata of the container images',
       );
       if (
-        !(
-          typeof oldImageCreated === 'string' && oldImageCreated.trim() !== ''
-        ) ||
-        !(typeof newImageCreated === 'string' && newImageCreated.trim() !== '')
+        !isString(oldImageCreated) ||
+        oldImageCreated.trim() === '' ||
+        !isString(newImageCreated) ||
+        newImageCreated.trim() === ''
       ) {
         logger.warn(
-          `Failed to get "created" timestamp of ${oldImage} or ${newImage}`,
+          { oldImage, newImage },
+          'Failed to get "created" timestamp of container images',
         );
         return null;
       }
@@ -168,8 +171,8 @@ export class ContainerVulnerabilities {
       const filteredOsvVulnerabilities =
         this.filterOSVVulnerabilitiesBasedOnCreatedDate(
           OSVContainerVulnerabilities,
-          new Date(oldImageCreated),
-          new Date(newImageCreated),
+          DateTime.fromISO(oldImageCreated, { zone: 'utc' }),
+          DateTime.fromISO(newImageCreated, { zone: 'utc' }),
         );
 
       const vulnerabilities: ContainerVulnerability[] = [];
@@ -195,8 +198,8 @@ export class ContainerVulnerabilities {
       return vulnerabilities;
     } catch (err) {
       logger.warn(
-        { err },
-        `Error fetching vulnerability information for ${depName}`,
+        { err, depName },
+        'Error fetching vulnerability information for dependency',
       );
       return null;
     }
@@ -220,7 +223,10 @@ export class ContainerVulnerabilities {
     const res = this.splitImageRef(imageRef);
 
     if (res === null) {
-      logger.warn(`cannot split ${imageRef} to registry, repo, digest`);
+      logger.warn(
+        { imageRef },
+        'Cannot split image ref to registry, repo, digest',
+      );
       return null;
     }
     const [registry, repo, digest] = res;
@@ -231,7 +237,7 @@ export class ContainerVulnerabilities {
       digest,
     );
     if (configDigest === null) {
-      logger.warn(`cannot get config digest of ${imageRef}`);
+      logger.warn({ imageRef }, 'cannot get config digest of image');
       return null;
     }
 
@@ -241,13 +247,12 @@ export class ContainerVulnerabilities {
       configDigest,
     );
 
-    if (imageConfig && typeof imageConfig.body === 'string') {
+    if (imageConfig && isString(imageConfig.body)) {
       const body = JSON.parse(imageConfig.body);
       return body.created;
-    } else {
-      logger.warn(`cannot get image config of ${imageRef}`);
-      return null;
     }
+    logger.warn({ imageRef }, 'cannot get image config of image');
+    return null;
   }
 
   private splitImageRef(input: string): [string, string, string] | null {
@@ -256,9 +261,12 @@ export class ContainerVulnerabilities {
     const [repository, digest] = rest.split('@');
 
     if (
-      !(typeof url === 'string' && url.trim() !== '') ||
-      !(typeof repository === 'string' && repository.trim() !== '') ||
-      !(typeof digest === 'string' && digest.trim() !== '')
+      !isString(url) ||
+      url.trim() === '' ||
+      !isString(repository) ||
+      repository.trim() === '' ||
+      !isString(digest) ||
+      digest.trim() === ''
     ) {
       logger.warn({ url, repository, digest }, 'failed to split the image url');
       return null;
@@ -269,8 +277,8 @@ export class ContainerVulnerabilities {
 
   private filterOSVVulnerabilitiesBasedOnCreatedDate(
     osvVulnerabilities: Osv.Vulnerability[],
-    oldImageCreated: Date,
-    newImageCreated: Date,
+    oldImageCreated: DateTime,
+    newImageCreated: DateTime,
   ): Osv.Vulnerability[] {
     const filteredOsvVulnerabilities = [];
 
@@ -285,7 +293,12 @@ export class ContainerVulnerabilities {
         );
         continue;
       }
-      const vulnerabilityCreated = new Date(osvVulnerability.published);
+      const vulnerabilityCreated = DateTime.fromISO(
+        osvVulnerability.published,
+        {
+          zone: 'utc',
+        },
+      );
 
       if (
         oldImageCreated < vulnerabilityCreated &&
@@ -331,7 +344,7 @@ export class ContainerVulnerabilities {
     const cvssVector =
       vulnerability.severity?.find((e) => e.type === 'CVSS_V4')?.score ??
       vulnerability.severity?.find((e) => e.type === 'CVSS_V3')?.score ??
-      vulnerability.severity?.[0]?.score!;
+      vulnerability.severity?.[0]?.score;
 
     if (cvssVector) {
       const [baseScore, severity] =
@@ -346,7 +359,7 @@ export class ContainerVulnerabilities {
     }
 
     return {
-      cvssVector,
+      cvssVector: cvssVector ?? '',
       score,
       severityLevel,
     };
@@ -354,15 +367,20 @@ export class ContainerVulnerabilities {
 
   // method almost completely copied from vulnerabilities.ts
   private generatePrBodyNotes(vulnerability: Osv.Vulnerability): string[] {
-    let aliases = [vulnerability.id].concat(vulnerability.aliases ?? []).sort();
+    let aliases = [vulnerability.id]
+      .concat(coerceArray(vulnerability.aliases))
+      .sort();
     aliases = aliases.map((id) => {
       if (id.startsWith('CVE-')) {
         return `[${id}](https://nvd.nist.gov/vuln/detail/${id})`;
-      } else if (id.startsWith('GHSA-')) {
+      }
+      if (id.startsWith('GHSA-')) {
         return `[${id}](https://github.com/advisories/${id})`;
-      } else if (id.startsWith('GO-')) {
+      }
+      if (id.startsWith('GO-')) {
         return `[${id}](https://pkg.go.dev/vuln/${id})`;
-      } else if (id.startsWith('RUSTSEC-')) {
+      }
+      if (id.startsWith('RUSTSEC-')) {
         return `[${id}](https://rustsec.org/advisories/${id}.html)`;
       }
 

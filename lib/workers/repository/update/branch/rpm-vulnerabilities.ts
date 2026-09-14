@@ -11,6 +11,7 @@ import type {
 } from '../../../../modules/manager/types.ts';
 import type { VersioningApi } from '../../../../modules/versioning/index.ts';
 import { get as getVersioning } from '../../../../modules/versioning/index.ts';
+import { coerceArray } from '../../../../util/array.ts';
 import { sanitizeMarkdown } from '../../../../util/markdown.ts';
 import { regEx } from '../../../../util/regex.ts';
 import { titleCase } from '../../../../util/string.ts';
@@ -101,7 +102,7 @@ export class RpmVulnerabilities {
           continue;
         }
 
-        for (const affected of osvVulnerability.affected ?? []) {
+        for (const affected of coerceArray(osvVulnerability.affected)) {
           const isVulnerable = this.isPackageVulnerable(
             ecosystem,
             packageName,
@@ -124,7 +125,7 @@ export class RpmVulnerabilities {
           );
 
           const parsedFixedVersion =
-            fixedVersion?.replace(/^>=\s*/, '') ?? null;
+            fixedVersion?.replace(regEx(/^>=\s*/), '') ?? null;
 
           if (
             filterNonFixed &&
@@ -216,7 +217,7 @@ export class RpmVulnerabilities {
     affected: Osv.Affected,
     versioningApi: VersioningApi,
   ): boolean {
-    for (const range of affected.ranges ?? []) {
+    for (const range of coerceArray(affected.ranges)) {
       if (range.type === 'GIT') {
         continue;
       }
@@ -274,7 +275,7 @@ export class RpmVulnerabilities {
     const fixedVersions: string[] = [];
     const lastAffectedVersions: string[] = [];
 
-    for (const range of affected.ranges ?? []) {
+    for (const range of coerceArray(affected.ranges)) {
       if (range.type === 'GIT') {
         continue;
       }
@@ -368,15 +369,20 @@ export class RpmVulnerabilities {
     truncated: boolean,
     isFirstVulnerability: boolean,
   ): string[] {
-    let aliases = [vulnerability.id].concat(vulnerability.aliases ?? []).sort();
+    let aliases = [vulnerability.id]
+      .concat(coerceArray(vulnerability.aliases))
+      .sort();
     aliases = aliases.map((id) => {
       if (id.startsWith('CVE-')) {
         return `[${id}](https://nvd.nist.gov/vuln/detail/${id})`;
-      } else if (id.startsWith('GHSA-')) {
+      }
+      if (id.startsWith('GHSA-')) {
         return `[${id}](https://github.com/advisories/${id})`;
-      } else if (id.startsWith('RUSTSEC-')) {
+      }
+      if (id.startsWith('RUSTSEC-')) {
         return `[${id}](https://rustsec.org/advisories/${id}.html)`;
-      } else if (id.startsWith('GO-')) {
+      }
+      if (id.startsWith('GO-')) {
         return `[${id}](https://pkg.go.dev/vuln/${id})`;
       }
 

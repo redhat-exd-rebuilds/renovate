@@ -522,9 +522,9 @@ export async function managerUpdateArtifacts(
   const result = await updateArtifacts(updateArtifact);
   if (manager === 'rpm-lockfile' && config.isLockFileMaintenance) {
     return postProcessRPMs(result, config);
-  } else {
-    return result;
   }
+
+  return result;
 }
 
 function processUpdateArtifactResults(

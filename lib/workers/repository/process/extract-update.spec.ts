@@ -275,7 +275,9 @@ describe('workers/repository/process/extract-update', () => {
           await lookup(config, packageFiles);
 
           expect(fetch.fetchUpdates).toHaveBeenCalled();
-          expect(appendVulnerabilityPackageRulesMock).toHaveBeenCalledExactlyOnceWith(config, packageFiles);
+          expect(
+            appendVulnerabilityPackageRulesMock,
+          ).toHaveBeenCalledExactlyOnceWith(config, packageFiles);
 
           expect(packageFiles.npm).toHaveLength(1);
           expect(packageFiles.npm[0].deps).toHaveLength(2);

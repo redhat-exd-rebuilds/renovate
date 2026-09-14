@@ -1,6 +1,5 @@
-import { hostRules } from '~test/host-rules.ts';
 import * as httpMock from '~test/http-mock.ts';
-import { partial } from '~test/util.ts';
+import { hostRules, partial } from '~test/util.ts';
 import { PAGE_NOT_FOUND_ERROR } from '../../../constants/error-messages.ts';
 import { Http } from '../../../util/http/index.ts';
 import {
