@@ -1,6 +1,6 @@
 import type { RedisClientType } from '@redis/client';
 import { createClient } from '@redis/client';
-import { fs, partial } from '~test/util';
+import { fs, partial } from '~test/util.ts';
 import { GlobalConfig } from '../../../../config/global.ts';
 import { normalizeRedisUrl } from '../../package/redis.ts';
 import type { RepoCacheRecord } from '../schema.ts';

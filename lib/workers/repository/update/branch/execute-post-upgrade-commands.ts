@@ -22,6 +22,7 @@ import {
   statLocalFile,
   writeLocalFile,
 } from '../../../../util/fs/index.ts';
+import { getGitEnvironmentVariables } from '../../../../util/git/auth.ts';
 import { withGitEnvironment } from '../../../../util/git/exec.ts';
 import {
   getRepoStatus,
