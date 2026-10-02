@@ -366,6 +366,35 @@ describe('workers/repository/updates/flatten', () => {
       expect(lockFileUpdate!.branchName).not.toBe(regularUpdate!.branchName);
     });
 
+    it('separates rpm-lockfile maintenance from other lockfile maintenance', async () => {
+      // TODO #22198
+      config.lockFileMaintenance!.enabled = true;
+      const packageFiles = {
+        npm: [
+          {
+            packageFile: 'package.json',
+            lockFiles: ['package-lock.json'],
+            deps: [],
+          },
+        ],
+        'rpm-lockfile': [
+          {
+            packageFile: 'rpms.in.yaml',
+            lockFiles: ['rpms.lock.yaml'],
+            deps: [],
+          },
+        ],
+      };
+      const res = await flattenUpdates(config, packageFiles);
+      expect(res).toHaveLength(2);
+      expect(res.find((u) => u.manager === 'npm')!.branchName).toBe(
+        'renovate/lock-file-maintenance',
+      );
+      expect(res.find((u) => u.manager === 'rpm-lockfile')!.branchName).toBe(
+        'renovate/rpm-lockfile-refresh',
+      );
+    });
+
     describe('hasAttestation is taken from the current value', () => {
       it.each([[true], [false], [undefined]])(
         'current attestation %s, new attestation %s',
