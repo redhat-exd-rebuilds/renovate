@@ -291,8 +291,9 @@ describe('workers/repository/finalize/prune', () => {
       config.branchList = [];
       config.baseBranches = ['release'];
       config.defaultBranch = 'main';
-      const mainBranch = 'renovate/konflux/main/gomod-update';
-      const releaseBranch = 'renovate/konflux/release/some-branch';
+      config.branchPrefix = 'konflux/mintmaker/';
+      const mainBranch = 'konflux/mintmaker/main/gomod-update';
+      const releaseBranch = 'konflux/mintmaker/release/some-branch';
       git.getBranchList.mockReturnValueOnce([mainBranch, releaseBranch]);
       platform.findPr.mockResolvedValueOnce(
         partial<Pr>({ title: 'Release PR' }),
@@ -320,9 +321,10 @@ describe('workers/repository/finalize/prune', () => {
       config.branchList = [];
       delete config.baseBranches;
       delete config.baseBranch;
+      config.branchPrefix = 'konflux/mintmaker/';
       git.getBranchList.mockReturnValueOnce([
-        'renovate/konflux/main/gomod-update',
-        'renovate/konflux/release/some-branch',
+        'konflux/mintmaker/main/gomod-update',
+        'konflux/mintmaker/release/some-branch',
       ]);
 
       await cleanup.pruneStaleBranches(config, config.branchList);
@@ -337,9 +339,10 @@ describe('workers/repository/finalize/prune', () => {
       config.parallelRunPruneStaleBranches = true;
       delete config.baseBranches;
       config.defaultBranch = 'main';
-      const kept = 'renovate/konflux/release/kept';
-      const stale = 'renovate/konflux/release/stale';
-      const otherBase = 'renovate/konflux/main/other';
+      config.branchPrefix = 'konflux/mintmaker/';
+      const kept = 'konflux/mintmaker/release/kept';
+      const stale = 'konflux/mintmaker/release/stale';
+      const otherBase = 'konflux/mintmaker/main/other';
       config.branchList = [kept];
       git.getBranchList.mockReturnValueOnce([kept, stale, otherBase]);
       platform.findPr.mockResolvedValueOnce(partial<Pr>({ title: 'stale PR' }));
@@ -383,6 +386,57 @@ describe('workers/repository/finalize/prune', () => {
         duplicatedBaseBranch,
       );
       expect(platform.updatePr).toHaveBeenCalledTimes(1);
+    });
+
+    it('with parallelRunPruneStaleBranches does not prune a branch owned by a longer base branch ending in the same segment', async () => {
+      config.parallelRunPruneStaleBranches = true;
+      config.baseBranches = ['main'];
+      config.defaultBranch = 'main';
+      config.branchPrefix = 'konflux/mintmaker/';
+      const ownBranch = 'konflux/mintmaker/main/dep-1.x';
+      // owned by the parallel run whose base branch is "post-release/main"
+      const otherBaseBranch =
+        'konflux/mintmaker/post-release/main/rpm-lockfile-refresh';
+      config.branchList = [ownBranch];
+      git.getBranchList.mockReturnValueOnce([ownBranch, otherBaseBranch]);
+
+      await cleanup.pruneStaleBranches(config, config.branchList);
+
+      expect(platform.findPr).not.toHaveBeenCalled();
+      expect(scm.deleteBranch).not.toHaveBeenCalled();
+      expect(platform.updatePr).not.toHaveBeenCalled();
+    });
+
+    it('with parallelRunPruneStaleBranches prunes a stale branch of a base branch containing a slash', async () => {
+      config.parallelRunPruneStaleBranches = true;
+      config.baseBranches = ['post-release/main'];
+      config.defaultBranch = 'main';
+      config.branchPrefix = 'konflux/mintmaker/';
+      config.branchList = [];
+      const stale = 'konflux/mintmaker/post-release/main/rpm-lockfile-refresh';
+      git.getBranchList.mockReturnValueOnce([stale]);
+      platform.findPr.mockResolvedValueOnce(partial<Pr>({ title: 'stale PR' }));
+      scm.isBranchModified.mockResolvedValueOnce(false);
+
+      await cleanup.pruneStaleBranches(config, config.branchList);
+
+      expect(scm.deleteBranch).toHaveBeenCalledExactlyOnceWith(stale);
+    });
+
+    it('with parallelRunPruneStaleBranches does not prune a branch whose topic starts with the base branch name', async () => {
+      config.parallelRunPruneStaleBranches = true;
+      config.baseBranches = ['main'];
+      config.defaultBranch = 'main';
+      config.branchPrefix = 'konflux/mintmaker/';
+      config.branchList = [];
+      git.getBranchList.mockReturnValueOnce([
+        'konflux/mintmaker/main-other/dep-1.x',
+      ]);
+
+      await cleanup.pruneStaleBranches(config, config.branchList);
+
+      expect(platform.findPr).not.toHaveBeenCalled();
+      expect(scm.deleteBranch).not.toHaveBeenCalled();
     });
   });
 });

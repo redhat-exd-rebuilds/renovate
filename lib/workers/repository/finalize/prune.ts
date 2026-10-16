@@ -147,6 +147,35 @@ function calculateBaseBranchRegex(config: RenovateConfig): RegExp | null {
   return baseBranchRe;
 }
 
+/**
+ * Decides whether a branch was created by the parallel run for a given base branch.
+ *
+ * Branch names are `${branchPrefix}${additionalBranchPrefix}${branchTopic}`, and MintMaker sets
+ * `additionalBranchPrefix` to `{{baseBranch}}/`, so the base branch directly follows the branch
+ * prefix. When more than one base branch is in play Renovate additionally appends
+ * `${baseBranch}-` to `branchPrefix`, which makes the base branch appear twice over.
+ *
+ * The base branch is matched whole rather than segment by segment, because it may itself contain
+ * a '/': the run for "main" must not claim the branches of "post-release/main".
+ * @param branchName Branch to test
+ * @param branchPrefix Configured branch prefix
+ * @param baseBranch Base branch of the current run
+ */
+function belongsToBaseBranch(
+  branchName: string,
+  branchPrefix: string,
+  baseBranch: string,
+): boolean {
+  for (const encodedBaseBranch of [baseBranch, `${baseBranch}-${baseBranch}`]) {
+    const prefix = `${branchPrefix}${encodedBaseBranch}`;
+    if (branchName === prefix || branchName.startsWith(`${prefix}/`)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function pruneStaleBranches(
   config: RenovateConfig,
   branchList: string[] | null | undefined,
@@ -206,16 +235,9 @@ export async function pruneStaleBranches(
 
     logger.debug(`Base branch for pruning: ${baseBranch}`);
 
-    // look for a segment of branch name matching the base branch or the base branch duplicated
-    // this duplication happens when branchTopic is set to the base branch and at the same time
-    // the baseBranchPatterns includes more than one branch
-    const baseBranchDuplicated = `${baseBranch}-${baseBranch}`;
-    renovateBranches = renovateBranches.filter((branchName) => {
-      const segments = branchName.split('/');
-      return segments.some(
-        (segment) => segment === baseBranch || segment === baseBranchDuplicated,
-      );
-    });
+    renovateBranches = renovateBranches.filter((branchName) =>
+      belongsToBaseBranch(branchName, config.branchPrefix!, baseBranch),
+    );
   }
 
   logger.debug(
