@@ -291,8 +291,9 @@ describe('workers/repository/finalize/prune', () => {
       config.branchList = [];
       config.baseBranches = ['release'];
       config.defaultBranch = 'main';
-      const mainBranch = 'renovate/konflux/main/gomod-update';
-      const releaseBranch = 'renovate/konflux/release/some-branch';
+      config.branchPrefix = 'konflux/mintmaker/';
+      const mainBranch = 'konflux/mintmaker/main/gomod-update';
+      const releaseBranch = 'konflux/mintmaker/release/some-branch';
       git.getBranchList.mockReturnValueOnce([mainBranch, releaseBranch]);
       platform.findPr.mockResolvedValueOnce(
         partial<Pr>({ title: 'Release PR' }),
@@ -320,9 +321,10 @@ describe('workers/repository/finalize/prune', () => {
       config.branchList = [];
       delete config.baseBranches;
       delete config.baseBranch;
+      config.branchPrefix = 'konflux/mintmaker/';
       git.getBranchList.mockReturnValueOnce([
-        'renovate/konflux/main/gomod-update',
-        'renovate/konflux/release/some-branch',
+        'konflux/mintmaker/main/gomod-update',
+        'konflux/mintmaker/release/some-branch',
       ]);
 
       await cleanup.pruneStaleBranches(config, config.branchList);
@@ -337,9 +339,10 @@ describe('workers/repository/finalize/prune', () => {
       config.parallelRunPruneStaleBranches = true;
       delete config.baseBranches;
       config.defaultBranch = 'main';
-      const kept = 'renovate/konflux/release/kept';
-      const stale = 'renovate/konflux/release/stale';
-      const otherBase = 'renovate/konflux/main/other';
+      config.branchPrefix = 'konflux/mintmaker/';
+      const kept = 'konflux/mintmaker/release/kept';
+      const stale = 'konflux/mintmaker/release/stale';
+      const otherBase = 'konflux/mintmaker/main/other';
       config.branchList = [kept];
       git.getBranchList.mockReturnValueOnce([kept, stale, otherBase]);
       platform.findPr.mockResolvedValueOnce(partial<Pr>({ title: 'stale PR' }));
