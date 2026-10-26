@@ -57,6 +57,33 @@ describe('modules/manager/rpm-lockfile/artifacts', () => {
       ]);
     });
 
+    it('passes the maintenance DNF cache to the resolver', async () => {
+      const execSnapshots = mockExecAll();
+
+      fs.readLocalFile.mockResolvedValue('Current rpms.lock.yaml');
+      vi.spyOn(fsUtils, 'getSiblingFileName').mockReturnValue('rpms.lock.yaml');
+
+      await updateArtifacts({
+        packageFileName: 'rpms.in.yaml',
+        updatedDeps: [],
+        newPackageFileContent: '',
+        config: {
+          updateType: 'lockFileMaintenance',
+          rpmDnfCacheDir: '/tmp/renovate-rpm-dnf-test',
+        },
+      });
+
+      expect(execSnapshots).toMatchObject([
+        {
+          options: {
+            env: {
+              RPM_LOCKFILE_PROTOTYPE_DNF_CACHE: '/tmp/renovate-rpm-dnf-test',
+            },
+          },
+        },
+      ]);
+    });
+
     it('returns updated rpms.lock.yaml', async () => {
       const execSnapshots = mockExecAll();
 
