@@ -1,4 +1,5 @@
 import { isNonEmptyArray } from '@sindresorhus/is';
+import { dir } from 'tmp-promise';
 import { GlobalConfig } from '../../../../config/global.ts';
 import { WORKER_FILE_UPDATE_FAILED } from '../../../../constants/error-messages.ts';
 import { logger } from '../../../../logger/index.ts';
@@ -442,30 +443,42 @@ export async function getUpdatedPackageFiles(
           managerPackageFiles[manager],
         );
         sortPackageFiles(config, manager, packageFilesForManager);
-        for (const packageFile of packageFilesForManager) {
-          const contents =
-            updatedFileContents[packageFile.path] ||
-            (await getFile(packageFile.path, config.baseBranch));
-          const results = await managerUpdateArtifacts(
-            manager,
-            {
-              packageFileName: packageFile.path,
-              updatedDeps: [],
-              newPackageFileContent: contents!,
-              config: patchConfigForArtifactsUpdate(
-                config,
-                manager,
-                packageFile.path,
-              ),
-            },
-            config,
-          );
-          processUpdateArtifactResults(
-            results,
-            updatedArtifacts,
-            artifactErrors,
-            artifactNotices,
-          );
+        const rpmDnfCache =
+          manager === 'rpm-lockfile'
+            ? await dir({ prefix: 'renovate-rpm-dnf-', unsafeCleanup: true })
+            : null;
+        try {
+          for (const packageFile of packageFilesForManager) {
+            const contents =
+              updatedFileContents[packageFile.path] ||
+              (await getFile(packageFile.path, config.baseBranch));
+            const artifactConfig = patchConfigForArtifactsUpdate(
+              config,
+              manager,
+              packageFile.path,
+            );
+            if (rpmDnfCache) {
+              artifactConfig.rpmDnfCacheDir = rpmDnfCache.path;
+            }
+            const results = await managerUpdateArtifacts(
+              manager,
+              {
+                packageFileName: packageFile.path,
+                updatedDeps: [],
+                newPackageFileContent: contents!,
+                config: artifactConfig,
+              },
+              config,
+            );
+            processUpdateArtifactResults(
+              results,
+              updatedArtifacts,
+              artifactErrors,
+              artifactNotices,
+            );
+          }
+        } finally {
+          await rpmDnfCache?.cleanup();
         }
       }
     }

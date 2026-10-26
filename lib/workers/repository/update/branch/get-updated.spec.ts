@@ -1,3 +1,4 @@
+import { access } from 'node:fs/promises';
 import { isArray } from '@sindresorhus/is';
 import { mockDeep } from 'vitest-mock-extended';
 import { git, logger } from '~test/util.ts';
@@ -13,6 +14,7 @@ import * as _npm from '../../../../modules/manager/npm/index.ts';
 import * as _pep621 from '../../../../modules/manager/pep621/index.ts';
 import * as _pipCompile from '../../../../modules/manager/pip-compile/index.ts';
 import * as _poetry from '../../../../modules/manager/poetry/index.ts';
+import * as _rpmLockfile from '../../../../modules/manager/rpm-lockfile/index.ts';
 import type {
   LookupUpdate,
   PackageDependency,
@@ -38,6 +40,7 @@ const autoReplace = vi.mocked(_autoReplace);
 const pep621 = vi.mocked(_pep621);
 const pipCompile = vi.mocked(_pipCompile);
 const poetry = vi.mocked(_poetry);
+const rpmLockfile = vi.mocked(_rpmLockfile);
 
 vi.mock('../../../../modules/manager/bundler/index.ts');
 vi.mock('../../../../modules/manager/composer/index.ts');
@@ -49,6 +52,7 @@ vi.mock('../../../../modules/manager/batect-wrapper/index.ts');
 vi.mock('../../../../modules/manager/pep621/index.ts');
 vi.mock('../../../../modules/manager/pip-compile/index.ts');
 vi.mock('../../../../modules/manager/poetry/index.ts');
+vi.mock('../../../../modules/manager/rpm-lockfile/index.ts');
 
 const createMock = vi.fn();
 
@@ -308,6 +312,54 @@ describe('workers/repository/update/branch/get-updated', () => {
           },
         ],
       });
+    });
+
+    it('shares a temporary DNF cache across RPM maintenance files', async () => {
+      const cachePaths: string[] = [];
+      for (const packageFile of ['first/rpms.in.yaml', 'second/rpms.in.yaml']) {
+        config.upgrades.push({
+          manager: 'rpm-lockfile',
+          updateType: 'lockFileMaintenance',
+          packageFile,
+          branchName: 'some-branch',
+        } satisfies BranchUpgradeConfig);
+      }
+      git.getFile.mockResolvedValue('input content');
+      rpmLockfile.updateArtifacts.mockImplementation(async ({ config }) => {
+        const cachePath = config.rpmDnfCacheDir!;
+        await access(cachePath);
+        cachePaths.push(cachePath);
+        return null;
+      });
+
+      await getUpdatedPackageFiles(config);
+
+      expect(cachePaths).toHaveLength(2);
+      expect(cachePaths[0]).toBe(cachePaths[1]);
+      await expect(access(cachePaths[0])).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    });
+
+    it('removes the RPM maintenance DNF cache after a resolver error', async () => {
+      config.upgrades.push({
+        manager: 'rpm-lockfile',
+        updateType: 'lockFileMaintenance',
+        packageFile: 'rpms.in.yaml',
+        branchName: 'some-branch',
+      } satisfies BranchUpgradeConfig);
+      let cachePath = '';
+      rpmLockfile.updateArtifacts.mockImplementation(async ({ config }) => {
+        cachePath = config.rpmDnfCacheDir!;
+        await access(cachePath);
+        throw new Error('resolver failed');
+      });
+
+      await expect(getUpdatedPackageFiles(config)).rejects.toThrow(
+        'resolver failed',
+      );
+
+      await expect(access(cachePath)).rejects.toMatchObject({ code: 'ENOENT' });
     });
 
     it('for updatedArtifacts passes proper lockFiles', async () => {

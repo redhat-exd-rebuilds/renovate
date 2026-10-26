@@ -50,6 +50,9 @@ export async function updateArtifacts({
     // Setting cwdFile would descend into that subfolder and
     // we'd have it set twice.
     const execOptions: ExecOptions = {
+      env: config.rpmDnfCacheDir
+        ? { RPM_LOCKFILE_PROTOTYPE_DNF_CACHE: config.rpmDnfCacheDir }
+        : undefined,
       extraEnv: {
         DNF_VAR_SSL_CLIENT_KEY: process.env.DNF_VAR_SSL_CLIENT_KEY,
         DNF_VAR_SSL_CLIENT_CERT: process.env.DNF_VAR_SSL_CLIENT_CERT,

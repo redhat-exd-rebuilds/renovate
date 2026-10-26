@@ -40,6 +40,7 @@ export interface ExtractConfig extends CustomExtractConfig {
 
 export interface UpdateArtifactsConfig {
   isLockFileMaintenance?: boolean;
+  rpmDnfCacheDir?: string;
   constraints?: Partial<Record<ConstraintName, string>>;
   composerIgnorePlatformReqs?: string[];
   goGetDirs?: string[];
