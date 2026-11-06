@@ -293,7 +293,7 @@ describe('modules/datasource/docker/common', () => {
         .reply(200, { token: 'some-token' });
 
       // API URL doesn't match per-repo matchHost, but repo URL does
-      hostRules.find.mockImplementation((search) => {
+      vi.spyOn(hostRules, 'find').mockImplementation((search) => {
         if (search?.url === 'https://quay.io/myorg/myrepo') {
           return {
             username: 'repo-user',
@@ -332,7 +332,7 @@ describe('modules/datasource/docker/common', () => {
         .get('/v2/', undefined, { badheaders: ['authorization'] })
         .reply(401, '', { 'www-authenticate': 'Authenticate you must' });
 
-      hostRules.find.mockReturnValue({
+      vi.spyOn(hostRules, 'find').mockReturnValue({
         username: 'registry-user',
         password: 'registry-password',
       });
@@ -360,7 +360,7 @@ describe('modules/datasource/docker/common', () => {
         .get('/v2/', undefined, { badheaders: ['authorization'] })
         .reply(401, '', { 'www-authenticate': 'Authenticate you must' });
 
-      hostRules.find.mockImplementation((search) => {
+      vi.spyOn(hostRules, 'find').mockImplementation((search) => {
         if (search?.url === 'https://quay.io/myorg/myrepo') {
           return { token: 'repo-token' };
         }

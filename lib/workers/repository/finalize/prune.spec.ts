@@ -333,6 +333,9 @@ describe('workers/repository/finalize/prune', () => {
       platform.findPr.mockResolvedValueOnce(
         partial<Pr>({ title: 'Release PR' }),
       );
+      platform.getPr.mockResolvedValueOnce(
+        partial<Pr>({ title: 'Release PR', state: 'open' }),
+      );
       scm.isBranchModified.mockResolvedValueOnce(false);
 
       await cleanup.pruneStaleBranches(config, config.branchList);
@@ -379,6 +382,10 @@ describe('workers/repository/finalize/prune', () => {
       config.branchList = [kept];
       git.getBranchList.mockReturnValueOnce([kept, stale, otherBase]);
       platform.findPr.mockResolvedValueOnce(partial<Pr>({ title: 'stale PR' }));
+      platform.getPr.mockResolvedValueOnce(
+        partial<Pr>({ title: 'stale PR', state: 'open' }),
+      );
+
       scm.isBranchModified.mockResolvedValueOnce(false);
 
       await cleanup.pruneStaleBranches(config, config.branchList);
@@ -403,6 +410,9 @@ describe('workers/repository/finalize/prune', () => {
         otherBaseBranch,
       ]);
       platform.findPr.mockResolvedValueOnce(partial<Pr>({ title: 'main PR' }));
+      platform.getPr.mockResolvedValueOnce(
+        partial<Pr>({ title: 'main PR', state: 'open' }),
+      );
       scm.isBranchModified.mockResolvedValueOnce(false);
 
       await cleanup.pruneStaleBranches(config, config.branchList);

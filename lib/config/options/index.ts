@@ -2726,6 +2726,7 @@ const options: Readonly<RenovateOptions>[] = [
   },
   {
     name: 'containerVulnerabilityAlerts',
+    scopes: ['repo'],
     description: 'Enable vulnerability alerts for containers.',
     type: 'boolean',
     default: false,
@@ -2734,6 +2735,7 @@ const options: Readonly<RenovateOptions>[] = [
   },
   {
     name: 'rpmVulnerabilityAlerts',
+    scopes: ['repo'],
     description: 'Enable vulnerability alerts for RPMs.',
     type: 'boolean',
     default: false,
@@ -2742,6 +2744,7 @@ const options: Readonly<RenovateOptions>[] = [
   },
   {
     name: 'rpmVulnerabilityAutomerge',
+    scopes: ['repo'],
     description:
       'Set at what criticality level should RPM vulnerability PRs be automerged.',
     type: 'string',
@@ -2751,6 +2754,7 @@ const options: Readonly<RenovateOptions>[] = [
   },
   {
     name: 'parallelRunPruneStaleBranches',
+    scopes: ['repo'],
     description:
       'Set to `true` to enable an alternative approach to pruning stale branches. In this approach, Renovate will only prune stale branches belonging to the one base branch it is renovating. pruneStaleBranches must be enabled for this to have any effect.',
     type: 'boolean',
@@ -3836,6 +3840,7 @@ const options: Readonly<RenovateOptions>[] = [
   },
   {
     name: 'requireTestsForPlatformAutomerge',
+    scopes: sharedScopes,
     description:
       'Require at least one CI test status check to be present before allowing automerge.',
     type: 'boolean',
