@@ -3,6 +3,7 @@ import is from '@sindresorhus/is';
 import { GlobalConfig } from '../../../../config/global.ts';
 import { logger } from '../../../../logger/index.ts';
 import { outputCacheFile } from '../../../fs/index.ts';
+import { buildCacheKey } from '../../package/key.ts';
 import { normalizeRedisUrl } from '../../package/redis.ts';
 import { getLocalCacheFileName } from '../common.ts';
 import type { RepoCacheRecord } from '../schema.ts';
@@ -64,7 +65,7 @@ export class RepoCacheRedis extends RepoCacheBase {
   }
 
   protected getCacheKey(): string {
-    return [NAMESPACE, this.platform, this.repository].join('.');
+    return buildCacheKey(NAMESPACE, this.platform, this.repository);
   }
 
   private async getRedisClient(): Promise<RedisType> {

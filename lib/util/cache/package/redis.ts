@@ -140,7 +140,7 @@ export async function init(
       clusterConfig.defaults.password = parsedUrl.password;
     }
 
-    client = createCluster(clusterConfig);
+    client = createCluster(clusterConfig) as ReturnType<typeof createCluster>;
   } else {
     client = createClient(config);
   }

@@ -88,7 +88,7 @@ describe('util/cache/repository/impl/redis', () => {
 
       await expect(redisCache.write(repoCache)).resolves.toBeUndefined();
       expect(mockClient.set).toHaveBeenCalledWith(
-        'repository.github.org/repo',
+        'repository:github:org/repo',
         JSON.stringify(repoCache),
         { EX: 90 * 24 * 60 * 60 },
       );
